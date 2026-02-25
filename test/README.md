@@ -1,4 +1,3 @@
-###### ประกอบด้วย Test design, Test data, Code ในการทดสอบที่เกียวข้อง 
+###### ประกอบด้วย Test design, Test data, Code ในการทดสอบที่เกียวข้อง ของแต่ละ Items
 
-###### (อาจจะแยก Folder เป็น Item)
 

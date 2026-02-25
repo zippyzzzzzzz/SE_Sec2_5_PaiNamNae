@@ -1,7 +1,5 @@
 # Test Cases
 
-## Sprint 1 
-
 ### Item No.4 Automated Verification
 
 ### TC01 – Register user with valid data
