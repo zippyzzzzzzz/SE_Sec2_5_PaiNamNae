@@ -20,7 +20,7 @@ ${DELAY}                0.1s
 
 
 ${URL_BASE}             http://localhost:3001
-# ${URL_BASE}           http://painamnae05.cpkku.com
+# ${URL_BASE}           http://csse0568.cpkku.com
 
 ${URL_LOGIN}            ${URL_BASE}/login
 ${URL_CREATE_TRIP}      ${URL_BASE}/createTrip

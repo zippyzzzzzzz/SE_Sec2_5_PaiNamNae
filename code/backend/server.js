@@ -22,8 +22,8 @@ const corsOptions = {
     origin: [
     'http://localhost:3001',
     'https://amazing-crisp-9bcb1a.netlify.app',
-    'http://painamnae05.cpkku.com',
-    'https://painamnae05.cpkku.com'
+    'http://csse0568.cpkku.com',
+    'https://csse0568.cpkku.com'
     ],
         
     credentials: true,
