@@ -48,11 +48,9 @@
                                     </th>
                                     <th class="px-4 py-3 text-xs font-medium text-left text-gray-500 uppercase">Username
                                     </th>
-                                    <th class="px-4 py-3 text-xs font-medium text-left text-gray-500 uppercase">บัตรประชาชน
-                                    </th>
                                     <th class="px-4 py-3 text-xs font-medium text-left text-gray-500 uppercase">สร้างเมื่อ
                                     </th>
-                                    <th class="px-4 py-3 text-xs font-medium text-left text-gray-500 uppercase">การกระทำ
+                                    <th class="px-4 py-3 text-xs font-medium text-left text-gray-500 uppercase">รายละเอียด
                                     </th>
                                 </tr>
                             </thead>
@@ -74,30 +72,19 @@
                                     </td>
                                     <td class="px-4 py-3 text-gray-700">{{ u.email }}</td>
                                     <td class="px-4 py-3 text-gray-700">{{ u.username }}</td>
-                                    <td class="px-4 py-3 text-gray-700">{{ u.nationalIdNumber || '-' }}</td>
                                     <td class="px-4 py-3 text-gray-700">
                                         <div class="text-sm">{{ formatDate(u.createdAt) }}</div>
                                     </td>
-                                    <td class="px-4 py-3 ">
-                                        <div class="flex items-center gap-1">
-                                            <button @click="onView(u)" class="p-2 text-gray-500 hover:text-emerald-600"
-                                                title="ดูรายละเอียด">
-                                                <i class="text-lg fa-regular fa-eye"></i>
-                                            </button>
-                                            <button @click="patchStatus(u.id, true)"
-                                                class="p-2 text-green-500 hover:text-green-700" title="อนุมัติ">
-                                                <i class="text-lg fa-solid fa-circle-check"></i>
-                                            </button>
-                                            <button @click="patchStatus(u.id, false)"
-                                                class="p-2 text-red-500 hover:text-red-700" title="ปฏิเสธ">
-                                                <i class="text-lg fa-solid fa-circle-xmark"></i>
-                                            </button>
-                                        </div>
+                                    <td class="px-4 py-3">
+                                        <button @click="onView(u)" class="p-2 text-gray-500 hover:text-emerald-600"
+                                            title="ดูรายละเอียด">
+                                            <i class="text-lg fa-regular fa-eye"></i>
+                                        </button>
                                     </td>
                                 </tr>
 
                                 <tr v-if="!isLoading && rows.length === 0">
-                                    <td colspan="6" class="px-4 py-10 text-center text-gray-500">ไม่มีคำขอยืนยัน</td>
+                                    <td colspan="5" class="px-4 py-10 text-center text-gray-500">ไม่มีคำขอยืนยัน</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -263,38 +250,6 @@ function onView(u) {
     navigateTo(`/admin/user-verifications/${u.id}`).catch(() => {})
 }
 
-const patchingIds = ref(new Set())
-
-async function patchStatus(id, isVerified) {
-    if (patchingIds.value.has(id)) return
-    patchingIds.value.add(id)
-    try {
-        const config = useRuntimeConfig()
-        const token = useCookie('token').value || (process.client ? localStorage.getItem('token') : '')
-        const res = await fetch(`${config.public.apiBase}/users/admin/${id}/status`, {
-            method: 'PATCH',
-            headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-                ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-            body: JSON.stringify({ isVerified }),
-            credentials: 'include',
-        })
-        const body = await res.json()
-        if (!res.ok) throw new Error(body?.message || `Status ${res.status}`)
-        toast.success('อัปเดตสถานะเรียบร้อย', isVerified ? 'ยืนยันผู้ใช้แล้ว' : 'ปฏิเสธคำขอแล้ว')
-        if (isVerified) {
-            // remove from list since they now verified
-            rows.value = rows.value.filter(u => u.id !== id)
-        }
-    } catch (err) {
-        console.error(err)
-        toast.error('อัปเดตสถานะล้มเหลว', err?.message || '')
-    } finally {
-        patchingIds.value.delete(id)
-    }
-}
 
 function closeMobileSidebar() {
     const sidebar = document.getElementById('sidebar')
