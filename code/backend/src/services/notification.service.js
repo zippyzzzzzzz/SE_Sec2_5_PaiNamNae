@@ -1,5 +1,8 @@
 const prisma = require('../utils/prisma');
 const ApiError = require('../utils/ApiError');
+//New from Weerawong
+const pushService = require('./push.service.js');
+const { sendFcmNotification } = require('../utils/fcm');
 
 const baseSelect = {
     id: true,
@@ -208,21 +211,134 @@ const countUnread = async (ownerId) => {
     return { unread: total };
 };
 
-const createProximityNotification = async (passengerId, driverName, routeId) => {
-    const user = await prisma.user.findUnique({ where: { id: passengerId } });
-    if (!user) throw new ApiError(404, 'Passenger not found');
+const createMessageNotification = async ({
+    recipientId,
+    bookingId,
+    routeId,
+    senderId,
+    senderName,
+    content,
+}) => {
+    const recipient = await prisma.user.findUnique({ where: { id: recipientId } });
+    if (!recipient) throw new ApiError(404, 'Recipient not found');
 
-    return await prisma.notification.create({
+    const notification = await prisma.notification.create({
         data: {
-            userId: passengerId,
-            type: 'TRIP_STARTED',
-            title: 'คนขับใกล้ถึงแล้ว!',
-            body: `คนขับ อยู่ห่างจากจุดรับของคุณไม่เกิน 2 กม. โปรดเตรียมตัวให้พร้อม`,
+            userId: recipientId,
+            type: 'BOOKING',
+            title: 'มีข้อความใหม่ จาก painamnae',
+            body: `${senderName}: ${content.slice(0, 120)}`,
             link: `/myTrip/${routeId}`,
+            metadata: {
+                category: 'MESSAGE',
+                bookingId,
+                senderId,
+                recipientId,
+                routeId,
+            },
         },
         select: baseSelect,
     });
+
+    const tokens = await pushService.getTokensByUser(recipientId);
+    const endpoints = [...tokens.map((t) => t.endpoint)]
+        .filter(Boolean)
+        .filter((v, i, arr) => arr.indexOf(v) === i);
+
+    let pushResult = { sent: false, reason: 'no-tokens' };
+
+    if (endpoints.length) {
+        try {
+            const fcmResult = await sendFcmNotification({
+                tokens: endpoints,
+                title: notification.title,
+                body: notification.body,
+                data: {
+                    notificationId: String(notification.id),
+                    bookingId: String(bookingId),
+                    category: 'MESSAGE',
+                    link: notification.link || '/notifications',
+                    click_action: notification.link || '/notifications',
+                },
+            });
+
+            pushResult = { sent: true, fcmResult };
+
+            if (fcmResult?.skipped) {
+                pushResult = { sent: false, reason: fcmResult.reason || 'skipped' };
+            }
+        } catch (err) {
+            const msg = err?.response?.data?.error?.message || err?.message;
+            const token = err?.token;
+            if (msg === 'NotRegistered' && token) {
+                await pushService.deleteToken(token);
+            }
+            pushResult = { sent: false, reason: msg };
+            console.warn('[FCM] send error', msg);
+        }
+    } else {
+        console.warn('[FCM] no tokens for recipient', { recipientId });
+    }
+
+    return { notification, pushResult };
 };
+
+const createBookingMessage = async ({ bookingId, content, senderId }) => {
+    const booking = await prisma.booking.findUnique({
+        where: { id: bookingId },
+        include: { route: true },
+    });
+    if (!booking) throw new ApiError(404, 'Booking not found');
+
+    const isDriver = booking.route.driverId === senderId;
+    const isPassenger = booking.passengerId === senderId;
+    if (!isDriver && !isPassenger) throw new ApiError(403, 'Forbidden');
+
+    const recipientId = isDriver ? booking.passengerId : booking.route.driverId;
+
+    const sender = await prisma.user.findUnique({
+        where: { id: senderId },
+        select: { firstName: true, lastName: true },
+    });
+    const senderName = [sender?.firstName, sender?.lastName].filter(Boolean).join(' ') || 'ผู้ใช้';
+
+    const message = await prisma.message.create({
+        data: { bookingId, senderId, content },
+    });
+
+    const { notification, pushResult } = await createMessageNotification({
+        recipientId,
+        bookingId,
+        routeId: booking.routeId,
+        senderId,
+        senderName,
+        content,
+    });
+
+    return { message, notification, pushResult };
+};
+
+const getBookingMessages = async (bookingId, userId) => {
+    const booking = await prisma.booking.findUnique({
+        where: { id: bookingId },
+        include: { route: true },
+    });
+
+    if (!booking) {
+        throw new ApiError(404, 'Booking not found');
+    }
+
+    const isDriver = booking.route.driverId === userId;
+    const isPassenger = booking.passengerId === userId;
+    if (!isDriver && !isPassenger) {
+        throw new ApiError(403, 'You are not part of this booking');
+    }
+
+    return await prisma.bookingMessage.findMany({
+        where: { bookingId },
+        orderBy: { createdAt: 'asc' },
+    });
+}
 
 module.exports = {
     listMyNotifications,
@@ -236,5 +352,8 @@ module.exports = {
     deleteNotificationByAdmin,
     countUnread,
     adminMarkRead,
-    createProximityNotification,
+    //New from Weerawong
+    createMessageNotification,
+    createBookingMessage,
+    getBookingMessages,
 };
