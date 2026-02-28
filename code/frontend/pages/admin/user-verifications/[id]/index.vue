@@ -134,6 +134,20 @@
                                     <InfoBox label="อัปเดตล่าสุด">
                                         {{ formatDate(user.updatedAt, true) }}
                                     </InfoBox>
+                                    <InfoBox label="สถานะการยืนยัน">
+                                        {{ user.verificationStatus || '-' }}
+                                    </InfoBox>
+                                </div>
+                                <div v-if="user.autoVerifyConfidence !== undefined" class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                    <InfoBox label="ความมั่นใจระบบ (confidence)">
+                                        {{ user.autoVerifyConfidence }}
+                                    </InfoBox>
+                                    <InfoBox label="เกณฑ์สูงสุด (auto approve)">
+                                        {{ user.autoVerifyHighThreshold }}
+                                    </InfoBox>
+                                    <InfoBox label="เกณฑ์ต่ำสุด (auto reject)">
+                                        {{ user.autoVerifyLowThreshold }}
+                                    </InfoBox>
                                 </div>
                             </section>
                         </div>
@@ -186,6 +200,11 @@ const route = useRoute()
 const { toast } = useToast()
 
 const user = ref(null)
+// typings (optional) for clarity
+// user.verificationStatus: string
+// user.autoVerifyConfidence: number
+// user.autoVerifyHighThreshold: number
+// user.autoVerifyLowThreshold: number
 const isLoading = ref(false)
 const loadError = ref('')
 const isPatchingStatus = ref(false)

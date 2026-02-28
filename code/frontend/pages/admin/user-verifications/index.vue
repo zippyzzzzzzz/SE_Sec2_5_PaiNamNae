@@ -210,7 +210,7 @@ async function fetchRows(page = 1) {
                 page,
                 limit: pagination.limit,
                 q: filters.q || undefined,
-                isVerified: false
+                verificationStatus: 'PENDING'
             }
         })
 

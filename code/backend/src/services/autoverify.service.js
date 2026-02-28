@@ -2,11 +2,18 @@ const axios = require("axios");
 const FormData = require("form-data");
 const prisma = require("../utils/prisma");
 
-const USER_FACE_THRESHOLD = parseFloat(
+// two levels of thresholds: low = auto reject, high = auto approve
+const USER_FACE_HIGH_THRESHOLD = parseFloat(
   process.env.USER_AUTO_VERIFY_CONFIDENCE_THRESHOLD ||
   process.env.AUTO_VERIFY_FACE_THRESHOLD ||
   process.env.FACE_THRESHOLD ||
   75
+);
+const USER_FACE_LOW_THRESHOLD = parseFloat(
+  process.env.USER_AUTO_VERIFY_LOW_CONFIDENCE_THRESHOLD ||
+  process.env.USER_AUTO_VERIFY_LOW_THRESHOLD ||
+  // default  lower value (e.g. 50)
+  50
 );
 
 const DRIVER_FACE_THRESHOLD = parseFloat(
@@ -52,27 +59,46 @@ async function compareFaces(imageUrl1, imageUrl2, apiKey, apiSecret) {
 
 async function autoVerifyUser(user) {
   if (!user?.nationalIdPhotoUrl || !user?.selfiePhotoUrl) {
-    return { verified: false, error: "MISSING_PHOTOS" };
+    return { verified: false, error: "MISSING_PHOTOS", status: "PENDING" };
   }
 
-  const result = await compareFaces(user.nationalIdPhotoUrl, 
-                                    user.selfiePhotoUrl, 
-                                    process.env.FACE_API_KEY, 
-                                    process.env.FACE_API_SECRET);
-  if (!result.ok) return { verified: false, error: result.error };
+  const result = await compareFaces(
+    user.nationalIdPhotoUrl,
+    user.selfiePhotoUrl,
+    process.env.FACE_API_KEY,
+    process.env.FACE_API_SECRET
+  );
+  if (!result.ok) return { verified: false, error: result.error, status: "PENDING" };
 
-  const verified = result.confidence >= USER_FACE_THRESHOLD;
-  if (verified) {
-    await prisma.user.update({
+  const conf = result.confidence;
+  let status;
+  const updateData = {
+      autoVerifyConfidence: conf,
+      autoVerifyHighThreshold: USER_FACE_HIGH_THRESHOLD,
+      autoVerifyLowThreshold: USER_FACE_LOW_THRESHOLD,
+  };
+  if (conf >= USER_FACE_HIGH_THRESHOLD) {
+    status = "VERIFIED"; // auto approve
+    updateData.isVerified = true;
+    updateData.verificationStatus = status;
+  } else if (conf < USER_FACE_LOW_THRESHOLD) {
+    status = "AUTO_REJECTED"; // too low, do not bother admin
+    updateData.verificationStatus = status;
+  } else {
+    status = "PENDING"; // borderline, wait for admin review
+    updateData.verificationStatus = status;
+  }
+  await prisma.user.update({
       where: { id: user.id },
-      data: { isVerified: true },
-    });
-  }
+      data: updateData,
+  });
 
   return {
-    verified,
-    confidence: result.confidence,
-    threshold: USER_FACE_THRESHOLD,
+    verified: status === "VERIFIED",
+    status,
+    confidence: conf,
+    highThreshold: USER_FACE_HIGH_THRESHOLD,
+    lowThreshold: USER_FACE_LOW_THRESHOLD,
   };
 }
 

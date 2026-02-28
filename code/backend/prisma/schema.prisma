@@ -60,6 +60,13 @@ enum NotificationType {
   ROUTE
 }
 
+enum UserVerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED    // manual rejection
+  AUTO_REJECTED
+}
+
 model User {
   id                    String   @id @default(cuid())
   username              String   @unique
@@ -76,6 +83,10 @@ model User {
   selfiePhotoUrl        String?
   role                  Role     @default(PASSENGER)
   isVerified            Boolean  @default(false)
+  verificationStatus    UserVerificationStatus @default(PENDING)
+  autoVerifyConfidence   Float?                  // confidence score from face API
+  autoVerifyHighThreshold Float?                 // threshold that gave auto-approval
+  autoVerifyLowThreshold Float?                  // threshold below which we auto-reject
   isActive              Boolean  @default(true)
   otpCode               String?
   lastLogin             DateTime?

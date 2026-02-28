@@ -11,6 +11,7 @@ const searchUsers = async (opts = {}) => {
         role,
         isActive,
         isVerified,
+        verificationStatus,
         createdFrom,
         createdTo,
         sortBy = 'createdAt',
@@ -37,6 +38,14 @@ const searchUsers = async (opts = {}) => {
             ]
         } : {}),
     };
+
+    // if caller wants pending verifications, also ensure user isn't already verified
+    if (verificationStatus === 'PENDING') {
+        where.verificationStatus = 'PENDING';
+        where.isVerified = false;
+    } else if (verificationStatus) {
+        where.verificationStatus = verificationStatus;
+    }
 
     const skip = (page - 1) * limit;
     const take = limit;
@@ -194,6 +203,11 @@ const updatePassword = async (userId, currentPassword, newPassword) => {
 };
 
 const updateUserProfile = async (id, data) => {
+    // synchronise verificationStatus when isVerified flag is present
+    if (data && Object.prototype.hasOwnProperty.call(data, 'isVerified')) {
+        data.verificationStatus = data.isVerified ? 'VERIFIED' : 'REJECTED';
+    }
+
     const updatedUser = await prisma.user.update({ where: { id }, data });
 
     const { password, ...safeUser } = updatedUser;

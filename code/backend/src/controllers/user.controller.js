@@ -83,7 +83,7 @@ const createUser = asyncHandler(async (req, res) => {
 
     let notifPayload;
 
-    if (verifyResult.verified) {
+    if (verifyResult.status === 'VERIFIED') {
         notifPayload = {
             userId: newUser.id,
             type: 'VERIFICATION',
@@ -92,10 +92,10 @@ const createUser = asyncHandler(async (req, res) => {
             link: '/profile',
             metadata: {
                 confidence: verifyResult.confidence,
-                method: 'auto'
-            }
+                method: 'auto',
+            },
         };
-    } else {
+    } else if (verifyResult.status === 'PENDING') {
         notifPayload = {
             userId: newUser.id,
             type: 'VERIFICATION',
@@ -103,19 +103,33 @@ const createUser = asyncHandler(async (req, res) => {
             body: 'ข้อมูลของคุณอยู่ระหว่างการตรวจสอบโดยระบบหรือแอดมิน',
             link: '/profile/verification',
             metadata: {
-                method: 'auto_failed'
-            }
+                method: 'auto_pending',
+            },
+        };
+    } else if (verifyResult.status === 'AUTO_REJECTED') {
+        notifPayload = {
+            userId: newUser.id,
+            type: 'VERIFICATION',
+            title: 'การยืนยันตัวตนล้มเหลว',
+            body: 'ระบบตรวจสอบอัตโนมัติพบความแตกต่างมากเกินไป กรุณาตรวจสอบข้อมูลและส่งใหม่',
+            link: '/profile/verification',
+            metadata: {
+                method: 'auto_rejected',
+            },
         };
     }
 
     await notifService.createNotificationByAdmin(notifPayload);
 
+    let msg = "User created.";
+    if (verifyResult.status === 'VERIFIED') msg += " Auto-verified.";
+    else if (verifyResult.status === 'PENDING') msg += " Awaiting admin review.";
+    else if (verifyResult.status === 'AUTO_REJECTED') msg += " Auto-rejected (no review).";
+    
     res.status(201).json({
         success: true,
-        message: verifyResult.verified
-            ? "User created and auto-verified."
-            : "User created. Waiting for verification.",
-        data: updatedUser   
+        message: msg,
+        data: updatedUser
     });
 });
 
@@ -175,10 +189,16 @@ const setUserStatus = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Provide at least one of isActive or isVerified as boolean');
     }
 
-    let updatedUser = await userService.updateUserProfile(req.params.id, {
+    // compute verificationStatus change if applicable
+    const updatePayload = {
         ...(typeof isActive === 'boolean' ? { isActive } : {}),
         ...(typeof isVerified === 'boolean' ? { isVerified } : {}),
-    });
+    };
+    if (typeof isVerified === 'boolean') {
+        updatePayload.verificationStatus = isVerified ? 'VERIFIED' : 'REJECTED';
+    }
+
+    let updatedUser = await userService.updateUserProfile(req.params.id, updatePayload);
 
     if (typeof isVerified === 'boolean') {
         try {

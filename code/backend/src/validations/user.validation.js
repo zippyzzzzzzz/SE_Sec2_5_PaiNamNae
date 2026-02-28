@@ -68,6 +68,9 @@ const listUsersQuerySchema = z.object({
             return Boolean(v);
         })
         .optional(),
+    verificationStatus: z
+        .enum(['PENDING','VERIFIED','REJECTED','AUTO_REJECTED'])
+        .optional(),
 
     createdFrom: z.string().refine(v => !isNaN(Date.parse(v)), { message: "Invalid createdFrom" }).optional(),
     createdTo: z.string().refine(v => !isNaN(Date.parse(v)), { message: "Invalid createdTo" }).optional(),
