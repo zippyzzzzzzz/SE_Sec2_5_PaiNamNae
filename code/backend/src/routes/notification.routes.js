@@ -8,6 +8,9 @@ const {
     listMyNotificationsQuerySchema,
     listNotificationsAdminQuerySchema,
     createNotificationAdminSchema,
+    subscribePushSchema,
+    bookingIdParamSchema,
+    bookingMessageSchema
 } = require('../validations/notification.validation');
 
 const router = express.Router();
