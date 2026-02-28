@@ -1,14 +1,12 @@
-export default defineNuxtRouteMiddleware((to, from) => {
+export default defineNuxtRouteMiddleware(() => {
   if (process.server) return
 
-  const user = useCookie("user").value;
-  const token = useCookie("token").value;
+  const token = useCookie("token").value
 
   if (!token) {
-    return navigateTo("/login");
+    return navigateTo("/login")
   }
+})
 
-  if (!user || user.role !== "ADMIN") {
-    return navigateTo("/");
-  }
-});
+console.log("user cookie:", useCookie("user").value)
+console.log("token cookie:", useCookie("token").value)
