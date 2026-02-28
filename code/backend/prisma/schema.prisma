@@ -87,6 +87,8 @@ model User {
   autoVerifyConfidence   Float?                  // confidence score from face API
   autoVerifyHighThreshold Float?                 // threshold that gave auto-approval
   autoVerifyLowThreshold Float?                  // threshold below which we auto-reject
+  ocrVerificationStatus String?                 // OCR result: VERIFIED, BORDERLINE, REJECTED
+  ocrData               Json?                   // Extracted ID data from OCR (id_number, expiry_date, name, etc)
   isActive              Boolean  @default(true)
   otpCode               String?
   lastLogin             DateTime?
