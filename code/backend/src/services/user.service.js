@@ -143,12 +143,10 @@ const createUser = async (data) => {
     if (existingUserByEmail) {
         throw new ApiError(409, "This email is already in use.");
     }
-
     const existingUserByUsername = await getUserByUsername(data.username);
     if (existingUserByUsername) {
         throw new ApiError(409, "This username is already taken.");
     }
-
     const hashedPassword = await bcrypt.hash(data.password, SALT_ROUNDS);
 
     const createData = {
@@ -159,30 +157,19 @@ const createUser = async (data) => {
         lastName: data.lastName,
         phoneNumber: data.phoneNumber,
         gender: data.gender,
-        role: data.role || 'PASSENGER',
+        nationalIdNumber: data.nationalIdNumber,
+        nationalIdExpiryDate: new Date(data.nationalIdExpiryDate), // แปลง string เป็น Date object
+        nationalIdPhotoUrl: data.nationalIdPhotoUrl, // URL จาก Cloudinary
+        selfiePhotoUrl: data.selfiePhotoUrl, // URL จาก Cloudinary
+        role: data.role || 'PASSENGER'
     };
-
-    if (data.nationalIdNumber) {
-        createData.nationalIdNumber = data.nationalIdNumber;
-    }
-
-    if (data.nationalIdExpiryDate) {
-        createData.nationalIdExpiryDate = new Date(data.nationalIdExpiryDate);
-    }
-
-    if (data.nationalIdPhotoUrl) {
-        createData.nationalIdPhotoUrl = data.nationalIdPhotoUrl;
-    }
-
-    if (data.selfiePhotoUrl) {
-        createData.selfiePhotoUrl = data.selfiePhotoUrl;
-    }
 
     const user = await prisma.user.create({ data: createData });
 
     const { password, ...safeUser } = user;
     return safeUser;
-};
+}
+
 const updatePassword = async (userId, currentPassword, newPassword) => {
     const userWithPassword = await prisma.user.findUnique({ where: { id: userId } });
 
