@@ -39,7 +39,6 @@ const searchUsers = async (opts = {}) => {
         } : {}),
     };
 
-    // if caller wants pending verifications, also ensure user isn't already verified
     if (verificationStatus === 'PENDING') {
         where.verificationStatus = 'PENDING';
         where.isVerified = false;

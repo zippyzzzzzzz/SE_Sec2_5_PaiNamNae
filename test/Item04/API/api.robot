@@ -7,7 +7,7 @@ Library           OperatingSystem
 Suite Setup       Create API Session
 
 *** Variables ***
-${BASE_URL}       http://localhost:3000
+${BASE_URL}       https://cp353004-team2-5.onrender.com
 ${API_PREFIX}     /api/users
 ${PASSWORD}       Test1234!
 
@@ -64,10 +64,14 @@ Register User
 
     ${files}=    Create Dictionary
 
-    ${id_tuple}=    Create List    id.png    ${idPhotoPath}    image/png
+    ${id_file}=    Get Binary File    ${idPhotoPath}
+
+    ${id_tuple}=    Create List    id.png    ${id_file}    image/png
     Set To Dictionary    ${files}    nationalIdPhotoUrl=${id_tuple}
 
-    ${selfie_tuple}=    Create List    selfie.png    ${selfiePath}    image/png
+    ${selfie_file}=    Get Binary File    ${selfiePath}
+
+    ${selfie_tuple}=    Create List    selfie.png    ${selfie_file}    image/png
     Set To Dictionary    ${files}    selfiePhotoUrl=${selfie_tuple}
 
     ${resp}=    POST On Session
@@ -78,7 +82,6 @@ Register User
     ...    expected_status=any
 
     Log To Console    Register Status: ${resp.status_code}
-    Log To Console    Register Body: ${resp.text}
 
     Should Be True    ${resp.status_code} in [200,201]
 
@@ -99,7 +102,6 @@ Login User
     ...    expected_status=any
 
     Log To Console    Login Status: ${resp.status_code}
-    Log To Console    Login Body: ${resp.text}
 
     Should Be Equal As Integers    ${resp.status_code}    200
 
@@ -119,8 +121,6 @@ Get Verification
     ...    /api/users/me
     ...    headers=${headers}
     ...    expected_status=any
-
-    Log To Console    Verification Response: ${resp.text}
 
     Should Be Equal As Integers    ${resp.status_code}    200
 
@@ -150,12 +150,11 @@ Wait Until Verification Status Is
 
 TC1 OCR+Face OK → VERIFIED
     ${email}=    Create Unique Email
-    ${nid}=      Create Unique National ID
 
     Register User
     ...    ${email}
-    ...    ${nid}
-    ...    2025-12-31T00:00:00.000Z
+    ...    3411700830334
+    ...    2025-03-21T00:00:00.000Z
     ...    ${ID_OK}
     ...    ${SELFIE_OK}
 

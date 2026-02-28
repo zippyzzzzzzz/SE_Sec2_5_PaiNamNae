@@ -10,7 +10,7 @@ Test Template     Register Flow
 
 
 *** Variables ***
-${BASE_URL}       http://localhost:3001
+${BASE_URL}       https://cp353004-team2-5.onrender.com
 ${DB_NAME}        painamnaedb
 ${DB_USER}        postgres
 ${DB_PASSWORD}    1234

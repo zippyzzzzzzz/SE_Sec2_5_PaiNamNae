@@ -76,7 +76,7 @@ const createUser = asyncHandler(async (req, res) => {
 
     const newUser = await userService.createUser(userData);
 
-    //AUTO VERIFY SECTION - Now with OCR integration
+    //auto verify
     const verifyResult = await autoVerifyUserWithOCR(newUser);
 
     const updatedUser = await userService.getUserById(newUser.id);
@@ -111,7 +111,7 @@ const createUser = asyncHandler(async (req, res) => {
             },
         };
     } else if (verifyResult.status === 'AUTO_REJECTED') {
-        // AUTO_REJECTED could be from OCR extraction failure OR face mismatch
+
         let reason;
         if (verifyResult.ocrVerification?.verificationStatus === 'AUTO_REJECTED') {
             reason = 'ไม่สามารถสแกนบัตรประชาชนได้ กรุณาส่งรูปภาพที่ชัดเจนขึ้น';
@@ -131,7 +131,7 @@ const createUser = asyncHandler(async (req, res) => {
             },
         };
     } else if (verifyResult.status === 'REJECTED') {
-        // REJECTED from OCR data mismatch
+
         const reason = 'ข้อมูลบัตรประชาชนไม่ตรงกับที่ระบบสแกนได้';
         notifPayload = {
             userId: newUser.id,
@@ -159,7 +159,6 @@ const createUser = asyncHandler(async (req, res) => {
         }
     }
     
-    // include ocr details for debugging/inspection
     res.status(201).json({
         success: true,
         message: msg,
