@@ -88,6 +88,9 @@ model User {
   notification          Notification[]
   createdRoutes         Route[]             @relation("DriverRoutes")
   bookings              Booking[]           @relation("PassengerBookings")
+  //New from Weerawong
+  pushSubscriptions     PushSubscription[]
+  sentMessages          Message[]           @relation("SenderRelation")
 
   @@index([role])
   @@index([isActive])
@@ -210,4 +213,26 @@ model Booking {
   pickupLocation  Json          @db.Json
   dropoffLocation Json          @db.Json
   createdAt       DateTime      @default(now())
+
+  //New from Weerawong
+  message         Message[]
+}
+
+//New from Weerawong
+model PushSubscription {
+  id              String        @id @default(cuid())
+  endpoint        String        @unique
+  key             Json
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Message {
+  id             String         @id @default(cuid())
+  content        String
+  createdAt      DateTime       @default(now())
+  bookingId      String
+  senderId       String
+  booking        Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  sender         User          @relation("SenderRelation", fields: [senderId], references: [id])
 }
