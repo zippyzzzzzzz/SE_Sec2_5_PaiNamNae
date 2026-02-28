@@ -57,7 +57,7 @@ const getMyUser = asyncHandler(async (req, res) => {
 
 })
 
-const { autoVerifyUser } = require("../services/autoverify.service");
+const { autoVerifyUser, autoVerifyUserWithOCR } = require("../services/autoverify.service");
 
 const createUser = asyncHandler(async (req, res) => {
     const userData = req.body;
@@ -76,46 +76,99 @@ const createUser = asyncHandler(async (req, res) => {
 
     const newUser = await userService.createUser(userData);
 
-    //AUTO VERIFY SECTION
-    const verifyResult = await autoVerifyUser(newUser);
+    //AUTO VERIFY SECTION - Now with OCR integration
+    const verifyResult = await autoVerifyUserWithOCR(newUser);
 
     const updatedUser = await userService.getUserById(newUser.id);
 
     let notifPayload;
 
-    if (verifyResult.verified) {
+    if (verifyResult.status === 'VERIFIED') {
         notifPayload = {
             userId: newUser.id,
             type: 'VERIFICATION',
             title: 'ยืนยันตัวตนสำเร็จ',
-            body: `ระบบตรวจสอบอัตโนมัติผ่าน (${verifyResult.confidence.toFixed(2)}%)`,
+            body: `บัตรประชาชนและใบหน้าตรงกัน ระบบตรวจสอบอัตโนมัติผ่าน (${verifyResult.faceConfidence.toFixed(2)}%)`,
             link: '/profile',
             metadata: {
-                confidence: verifyResult.confidence,
-                method: 'auto'
-            }
+                faceConfidence: verifyResult.faceConfidence,
+                ocrStatus: verifyResult.ocrVerification?.verificationStatus,
+                method: 'auto_with_ocr',
+            },
         };
-    } else {
+    } else if (verifyResult.status === 'PENDING') {
+        const ocrInfo = verifyResult.ocrVerification?.message || 'ข้อมูลบัตรประชาชนไม่ชัดเจน';
         notifPayload = {
             userId: newUser.id,
             type: 'VERIFICATION',
             title: 'กำลังรอการตรวจสอบ',
-            body: 'ข้อมูลของคุณอยู่ระหว่างการตรวจสอบโดยระบบหรือแอดมิน',
+            body: `ข้อมูลของคุณอยู่ระหว่างการตรวจสอบโดยแอดมิน (${ocrInfo})`,
             link: '/profile/verification',
             metadata: {
-                method: 'auto_failed'
-            }
+                faceConfidence: verifyResult.faceConfidence,
+                ocrStatus: verifyResult.ocrVerification?.verificationStatus,
+                method: 'auto_pending',
+            },
+        };
+    } else if (verifyResult.status === 'AUTO_REJECTED') {
+        // AUTO_REJECTED could be from OCR extraction failure OR face mismatch
+        let reason;
+        if (verifyResult.ocrVerification?.verificationStatus === 'AUTO_REJECTED') {
+            reason = 'ไม่สามารถสแกนบัตรประชาชนได้ กรุณาส่งรูปภาพที่ชัดเจนขึ้น';
+        } else {
+            reason = 'ใบหน้าในบัตรประชาชนและรูปถ่ายของคุณไม่ตรงกัน';
+        }
+        notifPayload = {
+            userId: newUser.id,
+            type: 'VERIFICATION',
+            title: 'การยืนยันตัวตนล้มเหลว',
+            body: `${reason} กรุณาตรวจสอบข้อมูลและส่งใหม่`,
+            link: '/profile/verification',
+            metadata: {
+                faceConfidence: verifyResult.faceConfidence,
+                ocrStatus: verifyResult.ocrVerification?.verificationStatus,
+                method: 'auto_rejected',
+            },
+        };
+    } else if (verifyResult.status === 'REJECTED') {
+        // REJECTED from OCR data mismatch
+        const reason = 'ข้อมูลบัตรประชาชนไม่ตรงกับที่ระบบสแกนได้';
+        notifPayload = {
+            userId: newUser.id,
+            type: 'VERIFICATION',
+            title: 'การยืนยันตัวตนล้มเหลว',
+            body: `${reason} กรุณาตรวจสอบข้อมูลและส่งใหม่`,
+            link: '/profile/verification',
+            metadata: {
+                faceConfidence: verifyResult.faceConfidence,
+                ocrStatus: verifyResult.ocrVerification?.verificationStatus,
+                method: 'rejected',
+            },
         };
     }
-
     await notifService.createNotificationByAdmin(notifPayload);
 
+    let msg = "User created.";
+    if (verifyResult.status === 'VERIFIED') msg += " Auto-verified (OCR + Face).";
+    else if (verifyResult.status === 'PENDING') msg += " Awaiting admin review (OCR or Face borderline).";
+    else if (verifyResult.status === 'AUTO_REJECTED') {
+        if (verifyResult.ocrVerification?.verificationStatus === 'AUTO_REJECTED') {
+            msg += " Auto-rejected (OCR verification failed - extraction or data mismatch).";
+        } else {
+            msg += " Auto-rejected (Face does not match ID card).";
+        }
+    }
+    
+    // include ocr details for debugging/inspection
     res.status(201).json({
         success: true,
-        message: verifyResult.verified
-            ? "User created and auto-verified."
-            : "User created. Waiting for verification.",
-        data: updatedUser   
+        message: msg,
+        data: updatedUser,
+        verification: {
+            status: verifyResult.status,
+            faceConfidence: verifyResult.faceConfidence,
+            ocrVerification: verifyResult.ocrVerification,
+        }
     });
 });
 
@@ -175,10 +228,16 @@ const setUserStatus = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Provide at least one of isActive or isVerified as boolean');
     }
 
-    let updatedUser = await userService.updateUserProfile(req.params.id, {
+    // compute verificationStatus change if applicable
+    const updatePayload = {
         ...(typeof isActive === 'boolean' ? { isActive } : {}),
         ...(typeof isVerified === 'boolean' ? { isVerified } : {}),
-    });
+    };
+    if (typeof isVerified === 'boolean') {
+        updatePayload.verificationStatus = isVerified ? 'VERIFIED' : 'REJECTED';
+    }
+
+    let updatedUser = await userService.updateUserProfile(req.params.id, updatePayload);
 
     if (typeof isVerified === 'boolean') {
         try {
