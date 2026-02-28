@@ -56,7 +56,18 @@ const listUsersQuerySchema = z.object({
     q: z.string().trim().min(1).optional(),
     role: z.nativeEnum(Role).optional(),
     isActive: z.coerce.boolean().optional(),
-    isVerified: z.coerce.boolean().optional(),
+    // avoid mistake where "false" string gets coerced to true
+    isVerified: z
+        .union([
+            z.boolean(),
+            z.literal('true'),
+            z.literal('false'),
+        ])
+        .transform(v => {
+            if (v === 'false') return false;
+            return Boolean(v);
+        })
+        .optional(),
 
     createdFrom: z.string().refine(v => !isNaN(Date.parse(v)), { message: "Invalid createdFrom" }).optional(),
     createdTo: z.string().refine(v => !isNaN(Date.parse(v)), { message: "Invalid createdTo" }).optional(),
