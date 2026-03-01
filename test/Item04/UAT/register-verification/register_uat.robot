@@ -19,19 +19,19 @@ ${DB_PORT}        5432
 
 
 *** Test Cases ***
-TC1 High Confidence - Approve + Login
+TC1 High Confidence = VERIFIED
     VERIFIED     True    LOGIN_SUCCESS    3411700830334    21-03-2025T00:00:00.000Z    ${CURDIR}/images/TC1/id.png    ${CURDIR}/images/TC1/selfie.png
 
-TC2 Medium Confidence - Pending
+TC2 Medium Confidence = PENDING
     PENDING     False   LOGIN_BLOCKED    3411700830334    21-03-2025T00:00:00.000Z    ${CURDIR}/images/TC2/id.jpg    ${CURDIR}/images/TC2/selfie.jpg
 
-TC3 Low Confidence - Reject
+TC3 Low Confidence = REJECTED
     AUTO_REJECTED    False   LOGIN_BLOCKED    3411700830334    21-03-2025T00:00:00.000Z    ${CURDIR}/images/TC3/id.jpg    ${CURDIR}/images/TC3/selfie.jpg
 
-TC4 OCR Fail - Reject
+TC4 OCR Fail = REJECTED
     AUTO_REJECTED    False   LOGIN_BLOCKED    4444444444444    21-03-2025T00:00:00.000Z    ${CURDIR}/images/TC4/id.png    ${CURDIR}/images/TC4/selfie.png
 
-TC5 Face Fail - Reject
+TC5 Face Fail = REJECTED
     AUTO_REJECTED    False   LOGIN_BLOCKED    3411700830334    21-03-2025T00:00:00.000Z    ${CURDIR}/images/TC5/id.png    ${CURDIR}/images/TC5/selfie.jpg
 
 

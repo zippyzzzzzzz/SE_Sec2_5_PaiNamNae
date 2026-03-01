@@ -3,8 +3,12 @@ Library           RequestsLibrary
 Library           Collections
 Library           String
 Library           OperatingSystem
+Library           DatabaseLibrary
 
-Suite Setup       Create API Session
+Suite Setup       Setup Suite
+Test Teardown     Cleanup Test User
+Suite Teardown    Disconnect From Database
+
 
 *** Variables ***
 ${BASE_URL}       https://cp353004-team2-5.onrender.com
@@ -18,23 +22,55 @@ ${SELFIE_FAIL}    ../UAT/register-verification/images/TC4/selfie.png
 ${TIMEOUT}        40s
 ${POLL_INTERVAL}  2s
 
+${CURRENT_EMAIL}  ${EMPTY}
+
+${DB_NAME}        painamnae
+${DB_USER}        painamnae_user
+${DB_PASSWORD}    Pr6fiVGTVGaAZrZsErYEfcvKmOb3efhW
+${DB_HOST}        dpg-d668h26r433s73dd1h0g-a.singapore-postgres.render.com
+${DB_PORT}        5432
+
 
 *** Keywords ***
 
-Create API Session
-    Create Session    api    ${BASE_URL}
+Setup Suite
+    Create Session    api    ${BASE_URL}    verify=True
+
+    Connect To Database
+    ...    psycopg2
+    ...    database=${DB_NAME}
+    ...    user=${DB_USER}
+    ...    password=${DB_PASSWORD}
+    ...    host=${DB_HOST}
+    ...    port=${DB_PORT}
+
+
+Cleanup Test User
+    Run Keyword And Ignore Error    Execute Sql String    ROLLBACK;
+
+    Run Keyword If    '${CURRENT_EMAIL}' != '' and '${CURRENT_EMAIL}' != '${None}'
+    ...    Execute Sql String
+    ...    DELETE FROM "User" WHERE "email"='${CURRENT_EMAIL}';
+
+    Run Keyword And Ignore Error    Execute Sql String    COMMIT;
+
+    Set Suite Variable    ${CURRENT_EMAIL}    ${EMPTY}
+
 
 Create Unique Email
     ${rand}=    Generate Random String    6    [LOWER]
     RETURN    test_${rand}@mail.com
 
+
 Create Unique Username
     ${rand}=    Generate Random String    6    [LOWER]
     RETURN    user_${rand}
 
+
 Create Unique National ID
     ${rand}=    Generate Random String    13    [NUMBERS]
     RETURN    ${rand}
+
 
 Create Unique Phone Number
     ${rand}=    Generate Random String    8    [NUMBERS]
@@ -42,11 +78,9 @@ Create Unique Phone Number
 
 
 Register User
-    [Arguments]    ${email}
-    ...    ${nationalId}
-    ...    ${expiry}
-    ...    ${idPhotoPath}
-    ...    ${selfiePath}
+    [Arguments]    ${email}    ${nationalId}    ${expiry}    ${idPhotoPath}    ${selfiePath}
+
+    Set Suite Variable    ${CURRENT_EMAIL}    ${email}
 
     ${username}=    Create Unique Username
     ${phone}=       Create Unique Phone Number
@@ -65,13 +99,11 @@ Register User
     ${files}=    Create Dictionary
 
     ${id_file}=    Get Binary File    ${idPhotoPath}
-
-    ${id_tuple}=    Create List    id.png    ${id_file}    image/png
+    ${id_tuple}=   Create List    id.png    ${id_file}    image/png
     Set To Dictionary    ${files}    nationalIdPhotoUrl=${id_tuple}
 
     ${selfie_file}=    Get Binary File    ${selfiePath}
-
-    ${selfie_tuple}=    Create List    selfie.png    ${selfie_file}    image/png
+    ${selfie_tuple}=   Create List    selfie.png    ${selfie_file}    image/png
     Set To Dictionary    ${files}    selfiePhotoUrl=${selfie_tuple}
 
     ${resp}=    POST On Session
@@ -80,8 +112,6 @@ Register User
     ...    data=${body}
     ...    files=${files}
     ...    expected_status=any
-
-    Log To Console    Register Status: ${resp.status_code}
 
     Should Be True    ${resp.status_code} in [200,201]
 
@@ -101,14 +131,13 @@ Login User
     ...    json=${body}
     ...    expected_status=any
 
-    Log To Console    Login Status: ${resp.status_code}
-
     Should Be Equal As Integers    ${resp.status_code}    200
 
     ${json}=    Set Variable    ${resp.json()}
     ${token}=   Set Variable    ${json['data']['token']}
 
     RETURN    ${token}
+
 
 Get Verification
     [Arguments]    ${token}
@@ -126,6 +155,7 @@ Get Verification
 
     ${json}=    Set Variable    ${resp.json()}
     RETURN    ${json['data']}
+
 
 Verification Should Be
     [Arguments]    ${token}    ${expected}
@@ -145,12 +175,10 @@ Wait Until Verification Status Is
     ...    ${expected}
 
 
-
 *** Test Cases ***
 
-TC1 OCR+Face OK → VERIFIED
+TC1 OCR+Face OK = VERIFIED
     ${email}=    Create Unique Email
-
     Register User
     ...    ${email}
     ...    3411700830334
@@ -159,11 +187,10 @@ TC1 OCR+Face OK → VERIFIED
     ...    ${SELFIE_OK}
 
     ${token}=    Login User    ${email}
-
     Wait Until Verification Status Is    ${token}    VERIFIED
 
 
-TC2 OCR mismatch → AUTO_REJECTED
+TC2 OCR mismatch = AUTO_REJECTED
     ${email}=    Create Unique Email
     ${nid}=      Create Unique National ID
 
@@ -175,11 +202,10 @@ TC2 OCR mismatch → AUTO_REJECTED
     ...    ${SELFIE_OK}
 
     ${token}=    Login User    ${email}
-
     Wait Until Verification Status Is    ${token}    AUTO_REJECTED
 
 
-TC3 Face mismatch → AUTO_REJECTED
+TC3 Face mismatch = AUTO_REJECTED
     ${email}=    Create Unique Email
     ${nid}=      Create Unique National ID
 
@@ -191,11 +217,10 @@ TC3 Face mismatch → AUTO_REJECTED
     ...    ${SELFIE_FAIL}
 
     ${token}=    Login User    ${email}
-
     Wait Until Verification Status Is    ${token}    AUTO_REJECTED
 
 
-TC4 Missing photos → 400
+TC4 Missing photos = 400
     ${email}=    Create Unique Email
     ${username}=    Create Unique Username
     ${nid}=         Create Unique National ID
@@ -221,7 +246,7 @@ TC4 Missing photos → 400
     Should Be Equal As Integers    ${resp.status_code}    400
 
 
-TC5 Login wrong password → fail
+TC5 Login wrong password = fail
     ${email}=    Create Unique Email
     ${nid}=      Create Unique National ID
 
