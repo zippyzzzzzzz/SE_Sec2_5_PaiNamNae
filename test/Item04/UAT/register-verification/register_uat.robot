@@ -10,11 +10,11 @@ Test Template     Register Flow
 
 
 *** Variables ***
-${BASE_URL}       https://cp353004-team2-5.onrender.com
-${DB_NAME}        painamnaedb
-${DB_USER}        postgres
-${DB_PASSWORD}    1234
-${DB_HOST}        localhost
+${BASE_URL}       https://csse0568.cpkku.com/
+${DB_NAME}        painamnae
+${DB_USER}        painamnae_user
+${DB_PASSWORD}    Pr6fiVGTVGaAZrZsErYEfcvKmOb3efhW
+${DB_HOST}        dpg-d668h26r433s73dd1h0g-a.singapore-postgres.render.com
 ${DB_PORT}        5432
 
 
@@ -52,6 +52,7 @@ Setup Suite
 
     ${ver}=    Query    SELECT version();
     Log To Console    DB Version: ${ver}
+    
 
 Teardown Suite
     Disconnect From Database
@@ -108,7 +109,6 @@ Register Flow
 Verify DB Status
     [Arguments]    ${email}    ${status}    ${verified}
 
-    Execute Sql String    ROLLBACK;
 
     ${res}=    Query    SELECT "verificationStatus","isVerified","ocrVerificationStatus","ocrData" FROM "User" WHERE "email"='${email}';
 
