@@ -20,19 +20,20 @@ export default defineNuxtPlugin((nuxtApp) => {
     let initialized = false;
     let isMessageListening = false;
 
-    const showForegroundNotification = (payload) => {
+    const showForegroundNotification = async (payload) => {
         if (typeof Notification === 'undefined') return;
         if (Notification.permission !== 'granted') return;
+
         const title = payload?.notification?.title || 'Notification';
         const body = payload?.notification?.body || '';
         const link = payload?.data?.link || payload?.data?.click_action || '/';
 
-        const n = new Notification(title, { body, data: { link } });
-        n.onclick = (event) => {
-            const url = event.target?.data?.link;
-            if (url) window.open(url, '_blank');
-            n.close();
-        };
+        try {
+            const reg = await navigator.serviceWorker.ready;
+            await reg.showNotification(title, { body, data: { link } });
+        } catch (err) {
+            console.error('Failed to show foreground notification:', err?.message);
+        }
     };
 
     const saveToken = (token) => {
