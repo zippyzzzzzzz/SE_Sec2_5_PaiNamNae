@@ -226,8 +226,8 @@ const createMessageNotification = async ({
         data: {
             userId: recipientId,
             type: 'BOOKING',
-            title: 'มีข้อความใหม่ จาก painamnae',
-            body: `${senderName}: ${content.slice(0, 120)}`,
+            title: 'Painamnae',
+            body: `มีข้อความจาก ${senderName}: ${content.slice(0, 120)}`,
             link: `/myTrip/${routeId}`,
             metadata: {
                 category: 'MESSAGE',
@@ -251,14 +251,14 @@ const createMessageNotification = async ({
         try {
             const fcmResult = await sendFcmNotification({
                 tokens: endpoints,
-                title: notification.title,
-                body: notification.body,
                 data: {
+                    title: notification.title,
+                    body: notification.body,
                     notificationId: String(notification.id),
                     bookingId: String(bookingId),
                     category: 'MESSAGE',
-                    link: notification.link || '/notifications',
-                    click_action: notification.link || '/notifications',
+                    link: '/notifications',
+                    click_action: notification.link || '/notifications', // เพื่อความชัวร์ในบาง Platform
                 },
             });
 

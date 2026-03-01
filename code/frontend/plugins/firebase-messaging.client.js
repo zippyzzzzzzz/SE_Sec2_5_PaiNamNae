@@ -5,6 +5,7 @@ export default defineNuxtPlugin((nuxtApp) => {
     const config = useRuntimeConfig();
 
     const STORAGE_KEY = 'fcm-token';
+    const DEFAULT_NOTIFICATION_URL = '';
 
     const firebaseConfig = {
         apiKey: config.public.firebaseApiKey,
@@ -26,7 +27,7 @@ export default defineNuxtPlugin((nuxtApp) => {
 
         const title = payload?.notification?.title || 'Notification';
         const body = payload?.notification?.body || '';
-        const link = payload?.data?.link || payload?.data?.click_action || '/';
+        const link = payload?.data?.link || payload?.data?.click_action || DEFAULT_NOTIFICATION_URL;
 
         try {
             const reg = await navigator.serviceWorker.ready;
