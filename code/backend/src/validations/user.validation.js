@@ -25,12 +25,11 @@ const updateMyProfileSchema = z.object({
     lastName: z.string().min(1, "lastname is require").optional(),
     phoneNumber: z.string().min(10, "phoneNumber is require").optional(),
     gender: z.string().min(1, "gender is require").optional(),
-    // role: z.nativeEnum(Role).optional(),
-    // isVerified: z.coerce.boolean({
-    //     required_error: "isVerified field is required",
-    //     invalid_type_error: "isVerified must be a boolean",
-    // }).optional(),
-})
+    
+    // [ADD THESE LINES] เพิ่ม 2 บรรทัดนี้
+    nationalIdNumber: z.string().length(13, "nationalIdNumber must be 13 digits").optional(),
+    nationalIdExpiryDate: z.string().optional(), // หรือ z.string().datetime().optional()
+}).passthrough(); // ใส่ .passthrough() ไว้กันเหนียว
 
 const updateUserByAdminSchema = updateMyProfileSchema.extend({
     role: z.nativeEnum(Role).optional(),
