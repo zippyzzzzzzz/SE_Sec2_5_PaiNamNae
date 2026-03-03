@@ -164,7 +164,7 @@ async function verifyIdCard(nationalIdPhotoUrl, userProvidedIdNumber, userProvid
   }
 
  return {
-    verificationStatus,
+    verificationStatus: status,
     ocrData,
     idNumberMatch: idMatch,
     idNumberSimilarity: idSimilarity, // ส่งค่านี้กลับไปดูด้วย
@@ -234,7 +234,7 @@ async function verifyDrivingLicense(licensePhotoUrl, userProvidedLicenseNumber, 
 // --- Export ฟังก์ชัน ---
 module.exports = {
   extractIdCardData,
-  verifyIdCard: async () => {}, // สามารถเติม Logic คล้ายกันได้
+  verifyIdCard,
   verifyDrivingLicense,
   normalizeIdNumber,
   normalizeExpiryDate,
