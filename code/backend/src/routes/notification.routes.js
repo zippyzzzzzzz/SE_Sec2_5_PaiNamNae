@@ -8,6 +8,9 @@ const {
     listMyNotificationsQuerySchema,
     listNotificationsAdminQuerySchema,
     createNotificationAdminSchema,
+    subscribePushSchema,
+    bookingIdParamSchema,
+    bookingMessageSchema
 } = require('../validations/notification.validation');
 
 const router = express.Router();
@@ -104,11 +107,28 @@ router.delete(
     controller.deleteMyNotification
 );
 
-//
+//New from Weerawong
 router.post(
-    '/proximity-alert',
+    '/push/subscribe',
     protect,
-    controller.notifyDriverNear
+    validate({ body: subscribePushSchema }),
+    controller.subscribePush
+);
+
+//New from Weerawong
+router.post(
+    '/bookings/:bookingId/messages',
+    protect,
+    validate({ params: bookingIdParamSchema, body: bookingMessageSchema }),
+    controller.createBookingMessage
+);
+
+//New from Weerawong
+router.get(
+    '/bookings/:bookingId/messages',
+    protect,
+    validate({ params: bookingIdParamSchema }),
+    controller.getBookingMessages
 );
 
 module.exports = router;

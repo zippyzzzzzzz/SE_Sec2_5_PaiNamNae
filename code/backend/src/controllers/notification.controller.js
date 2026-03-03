@@ -1,6 +1,7 @@
 const asyncHandler = require('express-async-handler');
-const prisma = require('../utils/prisma');
 const notifService = require('../services/notification.service');
+//New from Weerawong
+const pushService = require('../services/push.service.js');
 
 const listMyNotifications = asyncHandler(async (req, res) => {
     const result = await notifService.listMyNotifications(req.user.sub, req.query);
@@ -101,41 +102,29 @@ const adminDeleteNotification = asyncHandler(async (req, res) => {
     });
 });
 
-const notifyDriverNear = asyncHandler(async (req, res) => {
-    const { passengerId, routeId } = req.body;
-    if (!passengerId || !routeId) {
-        return res.status(400).json({ success: false, message: 'passengerId และ routeId จำเป็น' });
-    }
+//New from Weerawong
+const subscribePush = asyncHandler(async (req, res) => {
+    const { token, platform } = req.body;
+    await pushService.registerToken(req.user.sub, token, platform);
+    res.status(201).json({ success: true, message: 'Push token registered' });
+});
 
-    const driverName = [req.user.firstName, req.user.lastName].filter(Boolean).join(' ') || 'คนขับ';
-
-    // ป้องกันส่งซ้ำถ้ามีการแจ้งเตือนใกล้ถึงสำหรับ routeId เดียวกันแล้ว
-    const existing = await prisma.notification.findFirst({
-        where: {
-            userId: passengerId,
-            AND: [
-                { metadata: { path: ['kind'], equals: 'PROXIMITY_ALERT' } },
-                { metadata: { path: ['routeId'], equals: routeId } },
-            ],
-        },
+const createBookingMessage = asyncHandler(async (req, res) => {
+    const { bookingId } = req.params;
+    const { content } = req.body;
+    const { message, notification, pushResult } = await notifService.createBookingMessage({
+        bookingId,
+        content,
+        senderId: req.user.sub,
     });
 
-    if (existing) {
-        return res.status(200).json({ success: true, data: existing, duplicated: true });
-    }
+    res.status(201).json({ success: true, data: { message, notification, push: pushResult } });
+});
 
-    const notification = await prisma.notification.create({
-        data: {
-            userId: passengerId,
-            type: 'ROUTE',
-            title: 'คนขับใกล้ถึงแล้ว!',
-            body: `คนขับคุณ ${driverName} อยู่ห่างจากคุณไม่เกิน 2 กม. โปรดเตรียมตัวครับ`,
-            link: `/myTrip/${routeId}`,
-            metadata: { routeId, passengerId, kind: 'PROXIMITY_ALERT' },
-        },
-    });
-
-    res.status(201).json({ success: true, data: notification });
+const getBookingMessages = asyncHandler(async (req, res) => {
+    const { bookingId } = req.params;
+    const messages = await notifService.getBookingMessages(bookingId, req.user.sub);
+    res.status(200).json({ success: true, message: 'Messages retrieved successfully', data: messages });
 });
 
 module.exports = {
@@ -150,5 +139,8 @@ module.exports = {
     adminCreateNotification,
     adminMarkRead,
     adminDeleteNotification,
-    notifyDriverNear,
+    //New from Weerawong
+    subscribePush,
+    createBookingMessage,
+    getBookingMessages,
 };

@@ -5,6 +5,17 @@
         <h1 class="text-3xl font-bold text-gray-800 mb-6">การแจ้งเตือน</h1>
 
         <div class="bg-white shadow-md rounded-lg overflow-hidden">
+          <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-100">
+            <button
+              v-for="tab in tabs"
+              :key="tab.value"
+              @click="activeTab = tab.value"
+              class="px-3 py-1.5 text-sm rounded-full border transition"
+              :class="activeTab === tab.value ? 'bg-blue-600 text-white border-blue-600' : 'text-gray-600 border-gray-200 hover:border-blue-300'"
+            >
+              {{ tab.label }}
+            </button>
+          </div>
           <div v-if="pending" class="p-6 text-center text-gray-500">
             <p>กำลังโหลดการแจ้งเตือน...</p>
           </div>
@@ -72,6 +83,13 @@
 
                     <div class="flex items-center space-x-1">
                       <button
+                        v-if="isMessageNotification(notification) && notification.metadata?.bookingId"
+                        @click.stop="openReplyModal(notification)"
+                        class="px-3 py-1 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-100 rounded-full hover:bg-blue-100"
+                      >
+                        ตอบกลับ
+                      </button>
+                      <button
                         v-if="!notification.readAt"
                         @click="markAsRead(notification.id)"
                         class="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-full transition-colors"
@@ -118,19 +136,105 @@
             </li>
           </ul>
         </div>
+
+                <div v-if="showReplyModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+          <div class="w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+            <div class="flex items-start justify-between gap-3 px-6 py-5 border-b border-gray-100">
+              <div>
+                <p class="text-xs font-semibold tracking-wide text-blue-600 uppercase">ตอบกลับทันที</p>
+                <h3 class="text-lg font-semibold text-gray-900">ส่งแจ้งเตือน / ข้อความกลับ</h3>
+                <p class="mt-1 text-sm text-gray-500">เลือกข้อความด่วนหรือพิมพ์ข้อความเองได้ทันที</p>
+              </div>
+              <button
+                @click="closeReplyModal"
+                class="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+                aria-label="ปิดหน้าต่างตอบกลับ"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div class="px-6 py-5 space-y-5">
+              <div class="space-y-2">
+                <label class="text-sm font-medium text-gray-800">ข้อความที่จะส่ง</label>
+                <div class="relative">
+                  <textarea
+                    ref="replyTextareaRef"
+                    v-model="replyText"
+                    :maxlength="maxReplyLength"
+                    class="w-full border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 p-3 text-sm bg-gray-50/50 hover:bg-white transition"
+                    rows="4"
+                    placeholder="พิมพ์ข้อความของคุณที่นี่"
+                  ></textarea>
+                  <div class="absolute bottom-2 right-3 text-xs text-gray-400">
+                    {{ replyText.length }} / {{ maxReplyLength }}
+                  </div>
+                </div>
+              </div>
+
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium text-gray-800">ข้อความด่วน</span>
+                  <span class="text-xs text-gray-400">แตะเพื่อเติมอัตโนมัติ</span>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <button
+                    v-for="msg in quickReplies"
+                    :key="msg"
+                    @click="applyQuickReply(msg)"
+                    class="px-3 py-2 text-sm rounded-full border border-gray-200 bg-gray-50 hover:border-blue-400 hover:bg-blue-50 text-gray-700 transition"
+                  >
+                    {{ msg }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex justify-end gap-2 px-6 pb-5">
+              <button @click="closeReplyModal" class="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">ยกเลิก</button>
+              <button
+                @click="sendReply"
+                :disabled="!canSendReply"
+                class="px-4 py-2 text-sm text-white rounded-lg shadow-sm transition disabled:opacity-60 disabled:cursor-not-allowed"
+                :class="canSendReply ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400'"
+              >
+                ส่งข้อความ
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch } from "vue"; // รวม imports ไว้ที่เดียวกัน
+import { ref, watch, computed, nextTick } from "vue"; // รวม imports ไว้ที่เดียวกัน
 import { formatDistanceToNow } from "date-fns";
 import { th } from "date-fns/locale";
 import { useAuth } from '~/composables/useAuth';
 
 const { $api } = useNuxtApp();
 const { user } = useAuth();
+//New from Weerawong
+const tabs = [
+  { label: 'ทั้งหมด', value: 'all' },
+  { label: 'ข้อความ', value: 'message' },
+];
+const activeTab = ref('all');
+const showReplyModal = ref(false);
+const replyText = ref('');
+const replyTarget = ref(null);
+const replyTextareaRef = ref(null);
+const maxReplyLength = 300;
+const quickReplies = [
+  'กำลังเดินทางไปถึงภายใน 5 นาที',
+  'ขออภัยที่ล่าช้า',
+  'ถึงจุดนัดหมายแล้ว',
+  'ขอเวลาสักครู่'
+];
 
 useHead({
   title: "การแจ้งเตือน - ไปนำแหน่",
@@ -157,6 +261,14 @@ const { data: notifications, pending, error, refresh } = await useAsyncData(
   },
   { watch: [user] }
 );
+
+const displayNotifications = computed(() => {
+  if (!notifications.value) return [];
+  if (activeTab.value === 'message') {
+    return notifications.value.filter(isMessageNotification);
+  }
+  return notifications.value;
+});
 
 const getNotificationMessage = (notification) => {
   const senderName = notification.sender?.firstName || 'ใครบางคน';
@@ -209,6 +321,50 @@ const removeNotification = async (id) => {
     alert('ไม่สามารถลบแจ้งเตือนได้ในขณะนี้');
   }
 };
+
+const isMessageNotification = (n) => n?.metadata?.category === 'MESSAGE';
+
+const openReplyModal = (notification) => {
+  replyTarget.value = notification;
+  replyText.value = '';
+  showReplyModal.value = true;
+  nextTick(() => replyTextareaRef.value?.focus());
+};
+
+const closeReplyModal = () => {
+  showReplyModal.value = false;
+  replyTarget.value = null;
+  replyText.value = '';
+};
+
+const applyQuickReply = (text) => {
+  replyText.value = text;
+  nextTick(() => replyTextareaRef.value?.focus());
+};
+
+const canSendReply = computed(() => replyText.value.trim().length > 0);
+
+const sendReply = async () => {
+  if (!replyTarget.value?.metadata?.bookingId || !replyText.value.trim()) return;
+  try {
+    await $api(`/notifications/bookings/${replyTarget.value.metadata.bookingId}/messages`, {
+      method: 'POST',
+      body: { content: replyText.value.trim() },
+    });
+    closeReplyModal();
+    alert('ส่งข้อความแล้ว');
+  } catch (err) {
+    console.error('Send reply failed', err);
+    alert(err?.data?.message || 'ส่งข้อความไม่สำเร็จ');
+  }
+};
+
+watch(replyText, (val) => {
+  if (val.length > maxReplyLength) {
+    replyText.value = val.slice(0, maxReplyLength);
+  }
+});
+
 </script>
 
 <style scoped>
