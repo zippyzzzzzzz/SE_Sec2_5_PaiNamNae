@@ -1,38 +1,25 @@
-# Test Cases
+# UAT Verification - Test Cases
 
-### Item No.4 Automated Verification
+These scenarios are a high‑level overview used by multiple suites (registration, driver verification, and general user checks). Each suite supplies concrete inputs; the intent is described below.
 
-### TC01 – Register user with valid data
-Endpoint: POST /api/users
-Expected Result:
-- Status 201
-- success = true
-- verification triggered
+- **Successful auto‑verify**
+  * Clear document and selfie, matching ID/expiry
+  * Expect `VERIFIED` status, `isVerified=true`
 
----
+- **Borderline or uncertain**
+  * Slightly poor image quality or OCR/face confidence near thresholds
+  * Expect `PENDING` status for manual review
 
-### TC02 – Auto verification success case
-Expected Result:
-- isVerified = true
-- notification created
-- confidence > threshold
+- **Low confidence mismatch**
+  * Bad images or mismatched selfie/document
+  * Expect `AUTO_REJECTED`, user must retry or contact support
 
----
+- **Data mismatch / OCR failure**
+  * OCR extracted values don't match entered ID/expiry
+  * Expect `AUTO_REJECTED`, error message suggests correction
 
-### TC03 – Auto verification fail case
-Expected Result:
-- isVerified = false
+- **Face comparison failure**
+  * Document data correct but selfie does not resemble the ID/license
+  * Expect `AUTO_REJECTED` (or possibly `PENDING` if OCR borderline)
 
----
-
-### Item No.12 Driver Pickup Notification
-
-### TC01: Driver near aleart test
-Expected Result:
-- passenger get notification when driver far from pickup location less than 5 km
-
----
-
-### TC02: Driver near not aleart test (distance far more than 5 km)
-Expected Result:
-- passenger don't receive notification when driver far from pickup location more than 5 km
+Individual Robot test files then implement these cases with appropriate parameters.
