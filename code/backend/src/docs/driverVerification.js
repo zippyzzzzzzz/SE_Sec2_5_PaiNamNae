@@ -66,7 +66,7 @@
 
 /**
  * @swagger
- * /api/driver-verifications/me:
+ * /api/s/me:
  *   get:
  *     summary: Get current driver's verification record
  *     tags: [DriverVerifications]
@@ -81,7 +81,7 @@
 
 /**
  * @swagger
- * /api/driver-verifications/{id}:
+ * /api//{id}:
  *   put:
  *     summary: Update driver verification record (Driver)
  *     tags: [DriverVerifications]

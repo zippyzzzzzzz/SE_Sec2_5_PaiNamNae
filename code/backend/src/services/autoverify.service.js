@@ -1,7 +1,8 @@
 const axios = require("axios");
 const FormData = require("form-data");
 const prisma = require("../utils/prisma");
-const { verifyIdCard } = require("./ocr.service");
+//  Import ทั้ง verifyIdCard และ verifyDrivingLicense มาใช้งาน
+const { verifyIdCard, verifyDrivingLicense } = require("./ocr.service");
 
 // two levels of thresholds: low = auto reject, high = auto approve
 const USER_FACE_HIGH_THRESHOLD = parseFloat(
@@ -211,59 +212,122 @@ async function autoVerifyUserWithOCR(user) {
 }
 
 async function autoVerifyDriverVerification(verification) {
+  // 1. ตรวจสอบว่ามีรูปภาพครบถ้วนไหม
   if (!verification?.licensePhotoUrl || !verification?.selfiePhotoUrl) {
     return { verified: false, status: "PENDING", error: "MISSING_PHOTOS" };
   }
 
+  // --- เพิ่ม: ตรวจ OCR ก่อน ---
+  console.log("[DriverVerify] Starting OCR License verification...");
+  const ocrResult = await verifyDrivingLicense(
+    verification.licensePhotoUrl,
+    verification.licenseNumber, // เลขใบขับขี่ที่ User กรอก
+    verification.licenseExpiryDate
+  );
+
+  console.log("[DriverVerify] OCR Decision:", ocrResult.verificationStatus);
+
+  // 1. เคสที่แย่มาก (ต่ำกว่า 30%) ปัดตกทันที
+  if (ocrResult.verificationStatus === "AUTO_REJECTED") {
+    console.log("[DriverVerify] OCR very low confidence (<30%). Rejecting immediately.");
+    await updateDriverStatus(verification, "REJECTED");
+    return { 
+      verified: false, 
+      status: "REJECTED", 
+      error: "OCR_REJECTED", 
+      message: "ข้อมูลไม่ตรงกับรูปภาพอย่างรุนแรง โปรดถ่ายรูปบัตรให้ชัดเจน" 
+    };
+  }
+
+  // 2. เคสก้ำกึ่ง (30% - 79%) ส่งให้ Admin ตรวจมือ (PENDING)
+  // แก้ไข: จากเดิมที่อาจจะหลุด Reject ตอนนี้ให้เข้า PENDING เพื่อรอ Admin
+  if (ocrResult.verificationStatus === "NEEDS_REVIEW" || (ocrResult.confidence >= 30 && ocrResult.confidence < 80)) {
+    console.log("[DriverVerify] OCR in grey area (30-79%). Sending to Admin (PENDING).");
+    await updateDriverStatus(verification, "PENDING");
+    return { 
+      verified: false, 
+      status: "PENDING", 
+      message: "ข้อมูลบางส่วนไม่ชัดเจน กำลังรอเจ้าหน้าที่ตรวจสอบเพิ่มเติม" 
+    };
+  }
+
+  
+  // เคสที่ 3: ข้อมูล OCR ผ่านเกณฑ์ (>= 80%) ถึงจะยอมจ่ายเงินยิง Face API
+  console.log("[DriverVerify] OCR passed threshold. Starting face comparison...");
+  
+  // --- ตรวจใบหน้า ---
   const result = await compareFaces(
     verification.licensePhotoUrl,
     verification.selfiePhotoUrl,
     process.env.FACE_DRIVER_KEY || process.env.FACE_API_KEY,
     process.env.FACE_DRIVER_SECRET || process.env.FACE_API_SECRET
   );
-  if (!result.ok) return { verified: false, status: "PENDING", error: result.error };
 
-  const verified = result.confidence >= DRIVER_FACE_THRESHOLD;
-  if (verified) {
-    await prisma.$transaction(async (tx) => {
-      await tx.driverVerification.update({
-        where: { id: verification.id },
-        data: { status: "APPROVED" },
-      });
-      await tx.user.update({
-        where: { id: verification.userId },
-        data: { isVerified: true, role: "DRIVER" },
-      });
-    });
-  } else {
-    await prisma.$transaction(async (tx) => {
-      await tx.driverVerification.update({
-        where: { id: verification.id },
-        data: { status: "REJECTED" },
-      });
-      await tx.user.update({
-        where: { id: verification.userId },
-        data: { isVerified: false, role: "PASSENGER" },
-      });
-      await tx.route.updateMany({
-        where: {
-          driverId: verification.userId,
-          status: "AVAILABLE",
-        },
-        data: {
-          status: "CANCELLED",
-        },
-      });
-    });
+  if (!result.ok) {
+      console.log("[DriverVerify] Face API Error, falling back to Admin review.");
+      await updateDriverStatus(verification, "PENDING"); // ถ้า Face API ล่ม ให้แอดมินตรวจมือ
+      return { verified: false, status: "PENDING", error: result.error };
   }
 
+  const faceConfidence = result.confidence;
+  const facePassed = faceConfidence >= DRIVER_FACE_THRESHOLD;
+
+  //  [Decision Engine] สรุปผล: ต้องผ่านทั้ง OCR (VERIFIED/BORDERLINE) และ Face Match ถึงจะ APPROVED
+  // ถ้า OCR เป็น BORDERLINE แต่หน้าตรงเป๊ะ เราอาจจะส่งให้ Admin ตรวจต่อ (PENDING)
+  let finalStatus;
+  if (facePassed && ocrResult.verificationStatus === "VERIFIED") {
+    finalStatus = "APPROVED";
+  } else if (!facePassed) {
+    console.log("[DriverVerify] Face mismatch. Rejecting.");
+    finalStatus = "REJECTED"; // หน้าไม่เหมือน ปัดตกทันที
+  } else {
+    console.log("[DriverVerify] Face OK but OCR is Borderline. Sending to Admin.");
+    finalStatus = "PENDING";  // กรณีหน้าเหมือนแต่ OCR ก้ำกึ่ง (BORDERLINE)
+  }
+
+  //  [DB Update] บันทึกผลลง Database
+  await updateDriverStatus(verification, finalStatus);
+
   return {
-    verified,
-    status: verified ? "APPROVED" : "REJECTED",
-    confidence: result.confidence,
+    verified: finalStatus === "APPROVED",
+    status: finalStatus,
+    confidence: faceConfidence,
     threshold: DRIVER_FACE_THRESHOLD,
+    ocrStatus: ocrResult.verificationStatus,
+    message: finalStatus === "APPROVED" ? "ยืนยันผู้ขับขี่สำเร็จ" : "ข้อมูลไม่ชัดเจนหรือชื่อไม่ตรง"
   };
+
+  // [Helper Function] แยก Logic การอัปเดตตารางเพื่อความสะอาดของโค้ด
+  async function updateDriverStatus(verification, status) {
+  return await prisma.$transaction(async (tx) => {
+    // อัปเดตตารางใบขออนุมัติ
+    await tx.driverVerification.update({
+      where: { id: verification.id },
+      data: { status: status },
+    });
+
+    if (status === "APPROVED") {
+      // ถ้าผ่าน ให้เป็น DRIVER
+      await tx.user.update({
+        where: { id: verification.userId },
+        data: { role: "DRIVER" },
+      });
+    } else if (status === "REJECTED") {
+      // ถ้าไม่ผ่าน ให้กลับเป็น PASSENGER และยกเลิกงาน
+      await tx.user.update({
+        where: { id: verification.userId },
+        data: { role: "PASSENGER" },
+      });
+      await tx.route.updateMany({
+        where: { driverId: verification.userId, status: "AVAILABLE" },
+        data: { status: "CANCELLED" },
+      });
+    }
+  });
 }
+
+}
+
 
 module.exports = {
   autoVerifyUser,
