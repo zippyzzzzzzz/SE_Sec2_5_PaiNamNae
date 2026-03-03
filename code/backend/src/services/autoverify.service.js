@@ -224,9 +224,9 @@ async function autoVerifyDriverVerification(verification) {
 
   console.log("[DriverVerify] OCR Decision:", ocrResult.verificationStatus);
 
-  // เคสที่ 1: แย่มาก ปัดตกเลย
+  // 1. เคสที่แย่มาก (ต่ำกว่า 30%) ปัดตกทันที
   if (ocrResult.verificationStatus === "AUTO_REJECTED") {
-    console.log("[DriverVerify] OCR very low confidence. Rejecting immediately to save cost.");
+    console.log("[DriverVerify] OCR very low confidence (<30%). Rejecting immediately.");
     await updateDriverStatus(verification, "REJECTED");
     return { 
       verified: false, 
@@ -236,20 +236,22 @@ async function autoVerifyDriverVerification(verification) {
     };
   }
 
-  // เคสที่ 2: พออ่านได้แต่ไม่ตรง (ส่งแอดมิน แต่ไม่จ่ายเงินค่า Face API)
-  if (ocrResult.verificationStatus === "NEEDS_REVIEW") {
-    console.log("[DriverVerify] OCR mismatch but readable. Sending to PENDING without Face API.");
+  // 2. เคสก้ำกึ่ง (30% - 79%) ส่งให้ Admin ตรวจมือ (PENDING)
+  // แก้ไข: จากเดิมที่อาจจะหลุด Reject ตอนนี้ให้เข้า PENDING เพื่อรอ Admin
+  if (ocrResult.verificationStatus === "NEEDS_REVIEW" || (ocrResult.confidence >= 30 && ocrResult.confidence < 80)) {
+    console.log("[DriverVerify] OCR in grey area (30-79%). Sending to Admin (PENDING).");
     await updateDriverStatus(verification, "PENDING");
     return { 
       verified: false, 
       status: "PENDING", 
-      message: "ข้อมูลไม่ชัดเจน กำลังรอเจ้าหน้าที่ตรวจสอบรูปภาพเบื้องต้น" 
+      message: "ข้อมูลบางส่วนไม่ชัดเจน กำลังรอเจ้าหน้าที่ตรวจสอบเพิ่มเติม" 
     };
   }
 
   
   // เคสที่ 3: ข้อมูล OCR ผ่านเกณฑ์ (>= 80%) ถึงจะยอมจ่ายเงินยิง Face API
   console.log("[DriverVerify] OCR passed threshold. Starting face comparison...");
+  
   // --- ตรวจใบหน้า ---
   const result = await compareFaces(
     verification.licensePhotoUrl,
@@ -259,6 +261,7 @@ async function autoVerifyDriverVerification(verification) {
   );
 
   if (!result.ok) {
+      console.log("[DriverVerify] Face API Error, falling back to Admin review.");
       await updateDriverStatus(verification, "PENDING"); // ถ้า Face API ล่ม ให้แอดมินตรวจมือ
       return { verified: false, status: "PENDING", error: result.error };
   }
@@ -272,8 +275,10 @@ async function autoVerifyDriverVerification(verification) {
   if (facePassed && ocrResult.verificationStatus === "VERIFIED") {
     finalStatus = "APPROVED";
   } else if (!facePassed) {
+    console.log("[DriverVerify] Face mismatch. Rejecting.");
     finalStatus = "REJECTED"; // หน้าไม่เหมือน ปัดตกทันที
   } else {
+    console.log("[DriverVerify] Face OK but OCR is Borderline. Sending to Admin.");
     finalStatus = "PENDING";  // กรณีหน้าเหมือนแต่ OCR ก้ำกึ่ง (BORDERLINE)
   }
 

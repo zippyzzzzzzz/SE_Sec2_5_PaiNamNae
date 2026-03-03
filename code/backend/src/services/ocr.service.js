@@ -212,11 +212,15 @@ async function verifyDrivingLicense(licensePhotoUrl, userProvidedLicenseNumber, 
 
   // 4. ตัดสินใจ
   let status = "AUTO_REJECTED";
-  if (idMatch && dateMatch) {
-    status = "VERIFIED"; // ตรงเป๊ะ
-  } else if (idSimilarity >= 80) {
-    status = "BORDERLINE"; // ใกล้เคียง ส่งให้แอดมินดูต่อ
-  }
+  if (idSimilarity === 100 && dateMatch) {
+  status = "VERIFIED";
+} else if (idSimilarity >= 80) {
+  status = "BORDERLINE";
+} else if (idSimilarity >= 30) { // <--- เช็คตรงนี้! ถ้าเดิมเป็นเลขอื่น ให้แก้เป็น 30
+  status = "NEEDS_REVIEW";
+} else {
+  status = "AUTO_REJECTED";
+}
 
   console.log("[OCR_DEBUG] Final Decision Status:", status); // เพิ่ม Log
 
