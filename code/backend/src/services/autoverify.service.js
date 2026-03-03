@@ -14,7 +14,7 @@ const USER_FACE_LOW_THRESHOLD = parseFloat(
   process.env.USER_AUTO_VERIFY_LOW_CONFIDENCE_THRESHOLD ||
   process.env.USER_AUTO_VERIFY_LOW_THRESHOLD ||
   // default  lower value (e.g. 50)
-  50
+  40
 );
 
 const DRIVER_FACE_THRESHOLD = parseFloat(

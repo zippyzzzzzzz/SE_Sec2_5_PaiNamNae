@@ -20,19 +20,19 @@ ${DB_PORT}        5432
 
 *** Test Cases ***
 TC1 High Confidence = VERIFIED
-    VERIFIED     True    LOGIN_SUCCESS    3411700830334    21-03-2025T00:00:00.000Z    ${CURDIR}/images/TC1/id.png    ${CURDIR}/images/TC1/selfie.png
+    VERIFIED     True    VERIFY_SUCCESS    3411700830334    21-03-2025T00:00:00.000Z    ${CURDIR}/images/TC1/id.png    ${CURDIR}/images/TC1/selfie.png
 
 TC2 Medium Confidence = PENDING
-    PENDING     False   LOGIN_BLOCKED    3411700830334    21-03-2025T00:00:00.000Z    ${CURDIR}/images/TC2/id.jpg    ${CURDIR}/images/TC2/selfie.jpg
+    PENDING     False   VERIFY_BLOCKED    3411700830334    21-03-2025T00:00:00.000Z    ${CURDIR}/images/TC2/id.jpg    ${CURDIR}/images/TC2/selfie.jpg
 
 TC3 Low Confidence = REJECTED
-    AUTO_REJECTED    False   LOGIN_BLOCKED    3411700830334    21-03-2025T00:00:00.000Z    ${CURDIR}/images/TC3/id.jpg    ${CURDIR}/images/TC3/selfie.jpg
+    AUTO_REJECTED    False   VERIFY_BLOCKED    3411700830334    21-03-2025T00:00:00.000Z    ${CURDIR}/images/TC3/id.jpg    ${CURDIR}/images/TC3/selfie.jpg
 
 TC4 OCR Fail = REJECTED
-    AUTO_REJECTED    False   LOGIN_BLOCKED    4444444444444    21-03-2025T00:00:00.000Z    ${CURDIR}/images/TC4/id.png    ${CURDIR}/images/TC4/selfie.png
+    AUTO_REJECTED    False   VERIFY_BLOCKED    4444444444444    21-03-2025T00:00:00.000Z    ${CURDIR}/images/TC4/id.png    ${CURDIR}/images/TC4/selfie.png
 
 TC5 Face Fail = REJECTED
-    AUTO_REJECTED    False   LOGIN_BLOCKED    3411700830334    21-03-2025T00:00:00.000Z    ${CURDIR}/images/TC5/id.png    ${CURDIR}/images/TC5/selfie.jpg
+    AUTO_REJECTED    False   VERIFY_BLOCKED    3411700830334    21-03-2025T00:00:00.000Z    ${CURDIR}/images/TC5/id.png    ${CURDIR}/images/TC5/selfie.jpg
 
 
 *** Keywords ***
@@ -60,7 +60,7 @@ Teardown Suite
 
 
 Register Flow
-    [Arguments]    ${expected_status}    ${expected_verified}    ${login_expect}
+    [Arguments]    ${expected_status}    ${expected_verified}    ${verify_expect}
     ...    ${national_id}    ${expiry_date}    ${id_img}    ${selfie_img}
 
     ${R}=        Generate Random String    5    123456789
@@ -102,8 +102,8 @@ Register Flow
     Wait Until Keyword Succeeds    20s    2s
     ...    Verify DB Status    ${EMAIL}    ${expected_status}    ${expected_verified}
 
-    Run Keyword If    '${login_expect}' == 'LOGIN_SUCCESS'    Test Login Success
-    Run Keyword If    '${login_expect}' == 'LOGIN_BLOCKED'    Test Login Blocked
+    Run Keyword If    '${verify_expect}' == 'VERIFY_SUCCESS'    Test Verify Success
+    Run Keyword If    '${verify_expect}' == 'VERIFY_BLOCKED'    Test Verify Blocked
 
 
 Verify DB Status
@@ -124,7 +124,7 @@ Verify DB Status
     Log To Console    >>> OCR status from DB: ${ocrStatus}
     Log To Console    >>> OCR data from DB: ${ocrData}
 
-Test Login Success
+Test Verify Success
     Go To    ${BASE_URL}/login
     Wait Until Element Is Visible    id=identifier    10s
     Input Text    id=identifier    ${CURRENT_EMAIL}
@@ -140,7 +140,7 @@ Test Login Success
     ...    20s
 
 
-Test Login Blocked
+Test Verify Blocked
     Go To    ${BASE_URL}/login
     Wait Until Element Is Visible    id=identifier    10s
     Input Text    id=identifier       ${CURRENT_EMAIL}
