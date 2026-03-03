@@ -66,6 +66,7 @@ const submit = async () => {
         <!-- ปุ่มเข้าสู่ระบบ -->
         <button
           type="submit"
+          id="login"
           :disabled="loading"
           class="w-full py-3 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-60"
         >

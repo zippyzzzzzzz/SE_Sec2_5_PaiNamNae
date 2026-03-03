@@ -1,101 +1,128 @@
 *** Settings ***
 Library    SeleniumLibrary
-Library    RequestsLibrary
 Library    Collections
-Library    DateTime
 
 *** Variables ***
-${URL}     csse0568.cpkku.com
-${BROWSER}    chrome
-${DRIVER_USER}          simon45
-${DRIVER_PASS}          wirawong555!
-${PASSENGER_USER}       Test123123
-${PASSENGER_PASS}       wirawong555!
+${BASE_URL}     https://csse0568.cpkku.com
+${LOGIN_URL}    ${BASE_URL}/login
+${BROWSER}      chrome
 
-### ---------- DRIVER LOGIN (NEW WINDOW) ----------
-    Open Browser    ${URL}    chrome
+${SCREENSHOT_PATH}    C:/Users/User/Documents/GitHub/SE_Sec2_5_PaiNamNae/test/Item12/immge
+
+${DRIVER_USER}        simon45
+${DRIVER_PASS}        wirawong555!
+
+${PASSENGER_USER}     Test123123
+${PASSENGER_PASS}     wirawong555!
+
+
+*** Test Cases ***
+Driver Text To Passenger Flow
+
+    ### ===== DRIVER LOGIN =====
+    Open Website Allow Notification
     Maximize Browser Window
-
-    Input Text    id=username    ${DRIVER_USER}
+    Wait Until Element Is Visible    id=identifier
+    Input Text    id=identifier    ${DRIVER_USER}
     Input Text    id=password    ${DRIVER_PASS}
+
+    Wait Until Element Is Visible    id=login
     Click Button    id=login
+    Sleep    10s
+    Capture Page Screenshot    ${SCREENSHOT_PATH}/01_driver_login.png
 
-    ${DRIVER}=    Get Browser Id
+    ### ===== CREATE TRIP =====
+    Go To    ${BASE_URL}/createTrip
 
-    # ================= CREATE TRIP =================
-    Go To    ${URL}/createTrip
+    Input Text    id=startPoint      ขอนแก่น ประเทศไทย
+    Input Text    id=endPoint        กรุงเทพมหานคร
+    Input Text    id=travelDate      12/12/2026
+    Input Text    id=travelTime      12:00
+    Input Text    id=seatCount       4
+    Input Text    id=pricePerSeat    1000
 
-    Fill Text    id=startPoint      ขอนแก่น ประเทศไทย
-    Fill Text    id=endPoint        กรุงเทพมหานคร
-    Fill Text    id=travelDate      12/12/2026
-    Fill Text    id=travelTime      12:00
-    Fill Text    id=seatCount       4
-    Fill Text    id=pricePerSeat    1000
+    Capture Page Screenshot    ${SCREENSHOT_PATH}/02_fill_trip.png
 
-    Take Screenshot    02_driver_fill_trip
+    Click Button    css=button[type="submit"]
+    Sleep    3s
 
-    Click    css=button[type="submit"]
-    Wait For Load State
+    Capture Page Screenshot    ${SCREENSHOT_PATH}/03_trip_created.png
 
-    Take Screenshot    03_trip_created
+    ${DRIVER_WINDOW}=    Get Window Handles
 
 
-    ### ---------- PASSENGER LOGIN ----------
-    Open Browser    ${URL}    chrome
+    ### ===== PASSENGER LOGIN =====
+    Open Browser    ${LOGIN_URL}    ${BROWSER}
     Maximize Browser Window
-    Set Selenium Speed    0.5s
 
-    Input Text    id=username    ${PASSENGER_USER}
+    Wait Until Element Is Visible    id=identifier
+    Input Text    id=identifier    ${PASSENGER_USER}
     Input Text    id=password    ${PASSENGER_PASS}
+
+    Wait Until Element Is Visible    id=login
     Click Button    id=login
 
-    ${PASSENGER}=    Get Browser Id
-
-    # ================= FIND TRIP =================
-    Go To    ${URL}/findTrip
-
-    Fill Text    xpath=//input[@placeholder="จุดเริ่มต้น"]    ขอนแก่น
-    Press Keys   xpath=//input[@placeholder="จุดเริ่มต้น"]    Enter
-
-    Wait For Load State
-    Take Screenshot    05_search_result
-
-    # เลือก route อันแรก
-    Click    xpath=(//div[contains(@class,"cursor")])[1]
-
-    Take Screenshot    06_select_trip
-
-    # ================= BOOK SEAT =================
-    Click    text=จองที่นั่ง
-
-    Select Options By    label    มหาวิทยาลัยขอนแก่น
-    Select Options By    label    สะพานพระราม 9
-
-    Take Screenshot    07_pick_drop
-
-    Click    text=ยืนยันการจอง
-    Wait For Load State
-
-    Take Screenshot    08_booking_success
+    Sleep    3s
+    Capture Page Screenshot    ${SCREENSHOT_PATH}/04_passenger_login.png
 
 
-# ================= DRIVER SEND MESSAGE =================
-    Switch Page    0
+    ### ===== FIND TRIP =====
+    Go To    ${BASE_URL}/findTrip
 
-    Go To    ${URL}/myRoute
+    Input Text    xpath=//input[@placeholder="จุดเริ่มต้น"]    ขอนแก่น
+    Press Keys    xpath=//input[@placeholder="จุดเริ่มต้น"]    ENTER
 
-    Click    text=ยืนยัน
-    Click    text=สะกิดผู้โดยสาร
+    Sleep    3s
+    Capture Page Screenshot    ${SCREENSHOT_PATH}/05_search_trip.png
 
-    Fill Text
+    Click Element    xpath=(//div[contains(@class,"cursor")])[1]
+    Sleep    2s
+
+    Capture Page Screenshot    ${SCREENSHOT_PATH}/06_select_trip.png
+
+
+    ### ===== BOOK SEAT =====
+    Click Element    text=จองที่นั่ง
+    Sleep    2s
+
+    Select From List By Label    id=pickupPoint     มหาวิทยาลัยขอนแก่น
+    Select From List By Label    id=dropoffPoint    สะพานพระราม 9
+
+    Capture Page Screenshot    ${SCREENSHOT_PATH}/07_pick_drop.png
+
+    Click Element    text=ยืนยันการจอง
+    Sleep    3s
+
+    Capture Page Screenshot    ${SCREENSHOT_PATH}/08_booking_success.png
+
+
+    ### ===== BACK TO DRIVER =====
+    Switch Window    ${DRIVER_WINDOW}[0]
+
+    Go To    ${BASE_URL}/myRoute
+    Sleep    3s
+
+    Click Element    text=ยืนยัน
+    Click Element    text=สะกิดผู้โดยสาร
+
+    Input Text
     ...    xpath=//input[contains(@placeholder,"ข้อความ")]
     ...    สวัสดีครับ
 
-    Take Screenshot    09_before_send
+    Capture Page Screenshot    ${SCREENSHOT_PATH}/09_before_send.png
 
-    Click    text=ส่ง
-
+    Click Element    text=ส่ง
     Sleep    5s
-    Take Screenshot    10_message_sent
 
-    Close Browser
+    Capture Page Screenshot    ${SCREENSHOT_PATH}/10_message_sent.png
+
+    Close All Browsers
+
+
+*** Keywords ***
+Open Website Allow Notification
+    ${options}=    Evaluate    sys.modules['selenium.webdriver'].ChromeOptions()    sys
+    ${prefs}=    Create Dictionary
+    ...    profile.default_content_setting_values.notifications=1
+    Call Method    ${options}    add_experimental_option    prefs    ${prefs}
+    Open Browser    ${LOGIN_URL}    chrome    options=${options}
