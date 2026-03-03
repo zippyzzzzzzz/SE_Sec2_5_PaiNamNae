@@ -165,19 +165,21 @@ async function verifyIdCard(
   // Determine verification status
   let verificationStatus;
   let message;
-  
-  if (idNumberMatch && expiryDateMatch) {
-    
+
+  if (idNumberSimilarity === 100 && expiryDateSimilarity === 100) {
+
     verificationStatus = "VERIFIED";
     message = "ข้อมูลบัตรประชาชนตรงกับที่ระบบสแกนได้";
-  } else if (confidence >= 75) {
+
+  } else if (confidence < 100) {
 
     verificationStatus = "BORDERLINE";
-    message = "ข้อมูลบัตรประชาชนใกล้เคียง รอการตรวจสอบเพิ่มเติม";
+    message = "ข้อมูลบัตรประชาชนไม่ตรงสมบูรณ์ รอการตรวจสอบเพิ่มเติม";
+
   } else {
 
     verificationStatus = "AUTO_REJECTED";
-    message = "ข้อมูลบัตรประชาชนไม่ตรงกับข้อมูลที่ระบบสแกนได้";
+    message = "ข้อมูลบัตรประชาชนไม่สามารถตรวจสอบได้";
   }
   
   return {
