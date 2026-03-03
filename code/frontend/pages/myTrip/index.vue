@@ -154,6 +154,10 @@
                                             class="px-4 py-2 text-sm text-red-600 transition duration-200 border border-red-300 rounded-md hover:bg-red-50">
                                             ยกเลิกการจอง
                                         </button>
+                                        <button @click.stop="openMessageModal(trip)"
+                                            class="px-4 py-2 text-sm text-white transition duration-200 bg-blue-600 rounded-md hover:bg-blue-700">
+                                            สะกิดผู้ขับ
+                                        </button>
                                         <button
                                             class="px-4 py-2 text-sm text-white transition duration-200 bg-blue-600 rounded-md hover:bg-blue-700">
                                             แชทกับผู้ขับ
@@ -219,6 +223,64 @@
         <ConfirmModal :show="isModalVisible" :title="modalContent.title" :message="modalContent.message"
             :confirmText="modalContent.confirmText" :variant="modalContent.variant" @confirm="handleConfirmAction"
             @cancel="closeConfirmModal" />
+
+        <div v-if="isMessageModalVisible" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
+            @click.self="closeMessageModal">
+            <div class="w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+                <div class="flex items-start justify-between gap-3 px-6 py-5 border-b border-gray-100">
+                    <div>
+                        <p class="text-xs font-semibold tracking-wide text-blue-600 uppercase">แจ้งเตือนถึงผู้ขับ</p>
+                        <h3 class="text-lg font-semibold text-gray-900">ส่งข้อความด่วน</h3>
+                        <p class="mt-1 text-sm text-gray-500">เลือกข้อความด่วนหรือพิมพ์ข้อความของคุณ</p>
+                    </div>
+                    <button @click="closeMessageModal"
+                        class="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+                        aria-label="ปิดหน้าต่างส่งข้อความ">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="px-6 py-5 space-y-5">
+                    <div class="space-y-2">
+                        <label class="text-sm font-medium text-gray-800">ข้อความที่จะส่ง</label>
+                        <div class="relative">
+                            <textarea ref="messageTextareaRef" v-model="messageContent" :maxlength="maxMessageLength" rows="4"
+                                class="w-full border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 p-3 text-sm bg-gray-50/50 hover:bg-white transition"
+                                placeholder="พิมพ์ข้อความของคุณ"></textarea>
+                            <div class="absolute bottom-2 right-3 text-xs text-gray-400">
+                                {{ messageContent.length }} / {{ maxMessageLength }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-medium text-gray-800">ข้อความด่วน</span>
+                            <span class="text-xs text-gray-400">แตะเพื่อเติมอัตโนมัติ</span>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button v-for="msg in quickRepliesPassenger" :key="msg" @click="applyQuickReply(msg)"
+                                class="px-3 py-2 text-sm rounded-full border border-gray-200 bg-gray-50 hover:border-blue-400 hover:bg-blue-50 text-gray-700 transition">
+                                {{ msg }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 px-6 pb-5">
+                    <button @click="closeMessageModal"
+                        class="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">ยกเลิก</button>
+                    <button @click="sendMessageToDriver" :disabled="!canSendMessage"
+                        class="px-4 py-2 text-sm text-white rounded-lg shadow-sm transition disabled:opacity-60 disabled:cursor-not-allowed"
+                        :class="canSendMessage ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400'">
+                        ส่งข้อความ
+                    </button>
+                </div>
+            </div>
+        </div>
+
     </div>
 </template>
 
@@ -285,6 +347,18 @@ const isSubmittingCancel = ref(false)
 const selectedCancelReason = ref('')
 const cancelReasonError = ref('')
 const tripToCancel = ref(null)
+//New from Weerawong
+const isMessageModalVisible = ref(false)
+const messageContent = ref('')
+const messageTarget = ref(null)
+const messageTextareaRef = ref(null)
+const maxMessageLength = 300
+const quickRepliesPassenger = [
+    'กำลังเดินทางไป',
+    'ถึงจุดนัดหมายแล้ว',
+    'ขออภัยที่ล่าช้า'
+]
+const canSendMessage = computed(() => messageContent.value.trim().length > 0)
 
 // --- Computed Properties ---
 const filteredTrips = computed(() => {
@@ -649,6 +723,45 @@ function closeCancelModal() {
     isCancelModalVisible.value = false
     tripToCancel.value = null
 }
+//New from Weerawong
+const openMessageModal = (trip) => {
+    messageTarget.value = trip
+    messageContent.value = ''
+    isMessageModalVisible.value = true
+    nextTick(() => messageTextareaRef.value?.focus())
+}
+
+const closeMessageModal = () => {
+    isMessageModalVisible.value = false
+    messageTarget.value = null
+    messageContent.value = ''
+}
+
+const sendMessageToDriver = async () => {
+    if (!messageTarget.value?.id || !messageContent.value.trim()) return
+    try {
+        await $api(`/notifications/bookings/${messageTarget.value.id}/messages`, {
+            method: 'POST',
+            body: { content: messageContent.value.trim() },
+        })
+        toast.success('ส่งข้อความแล้ว', 'ผู้ขับจะได้รับการแจ้งเตือนทันที')
+        closeMessageModal()
+    } catch (error) {
+        console.error('Failed to send message:', error)
+        toast.error('ส่งข้อความไม่สำเร็จ', error?.data?.message || 'ลองใหม่อีกครั้ง')
+    }
+}
+
+const applyQuickReply = (text) => {
+    messageContent.value = text
+    nextTick(() => messageTextareaRef.value?.focus())
+}
+
+watch(messageContent, (val) => {
+    if (val.length > maxMessageLength) {
+        messageContent.value = val.slice(0, maxMessageLength)
+    }
+})
 
 async function submitCancel() {
     if (!selectedCancelReason.value) {

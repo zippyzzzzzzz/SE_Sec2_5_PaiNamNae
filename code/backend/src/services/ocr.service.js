@@ -84,9 +84,7 @@ function normalizeIdNumber(idNumber) {
 
 function normalizeExpiryDate(dateStr) {
   if (!dateStr) return null;
-  
   let date;
-  
   // 1. ตรวจสอบ Format YYYY-MM-DD (ISO)
   if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
     date = new Date(dateStr);

@@ -4,21 +4,26 @@ const prisma = require("../utils/prisma");
 //  Import ทั้ง verifyIdCard และ verifyDrivingLicense มาใช้งาน
 const { verifyIdCard, verifyDrivingLicense } = require("./ocr.service");
 
+// two levels of thresholds: low = auto reject, high = auto approve
 const USER_FACE_HIGH_THRESHOLD = parseFloat(
   process.env.USER_AUTO_VERIFY_CONFIDENCE_THRESHOLD ||
   process.env.AUTO_VERIFY_FACE_THRESHOLD ||
-  process.env.FACE_THRESHOLD || 75
+  process.env.FACE_THRESHOLD ||
+  75
 );
 const USER_FACE_LOW_THRESHOLD = parseFloat(
   process.env.USER_AUTO_VERIFY_LOW_CONFIDENCE_THRESHOLD ||
-  process.env.USER_AUTO_VERIFY_LOW_THRESHOLD || 50
+  process.env.USER_AUTO_VERIFY_LOW_THRESHOLD ||
+  // default  lower value (e.g. 50)
+  40
 );
 
 const DRIVER_FACE_THRESHOLD = parseFloat(
   process.env.DRIVER_AUTO_VERIFY_CONFIDENCE_THRESHOLD ||
   process.env.FACE_DRIVER_THRESHOLD ||
   process.env.AUTO_VERIFY_FACE_THRESHOLD ||
-  process.env.FACE_THRESHOLD || 75
+  process.env.FACE_THRESHOLD ||
+  75
 );
 
 const FACE_API_DISABLE_PROXY =
@@ -75,14 +80,14 @@ async function autoVerifyUser(user) {
       autoVerifyLowThreshold: USER_FACE_LOW_THRESHOLD,
   };
   if (conf >= USER_FACE_HIGH_THRESHOLD) {
-    status = "VERIFIED"; 
+    status = "VERIFIED"; // auto approve
     updateData.isVerified = true;
     updateData.verificationStatus = status;
   } else if (conf < USER_FACE_LOW_THRESHOLD) {
-    status = "AUTO_REJECTED"; 
+    status = "AUTO_REJECTED"; //low
     updateData.verificationStatus = status;
   } else {
-    status = "PENDING"; 
+    status = "PENDING"; // borderline, wait for admin review
     updateData.verificationStatus = status;
   }
   await prisma.user.update({
@@ -100,6 +105,7 @@ async function autoVerifyUser(user) {
 }
 
 async function autoVerifyUserWithOCR(user) {
+  console.log("[AutoVerify] CALLED FOR USER:", user.id);
   if (!user?.nationalIdPhotoUrl || !user?.selfiePhotoUrl) {
     return { verified: false, error: "MISSING_PHOTOS", status: "PENDING" };
   }
@@ -108,7 +114,6 @@ async function autoVerifyUserWithOCR(user) {
     return { verified: false, error: "MISSING_ID_INFO", status: "PENDING" };
   }
 
-  //verivy ID card data via OCR first
   console.log("[AutoVerify] Starting OCR ID card verification...");
   const ocrResult = await verifyIdCard(
     user.nationalIdPhotoUrl,
@@ -123,7 +128,6 @@ async function autoVerifyUserWithOCR(user) {
     dateMatch: ocrResult.expiryDateMatch,
   });
 
-  //verify OCR result before doing face comparison - if OCR fails (AUTO_REJECTED) then no need to do face comparison as we already know it won't verify
   console.log("[AutoVerify] Starting face comparison verification...");
   const faceResult = await compareFaces(
     user.nationalIdPhotoUrl,
@@ -146,14 +150,13 @@ async function autoVerifyUserWithOCR(user) {
   console.log("[AutoVerify] Face Confidence:", faceConfidence);
   console.log("[AutoVerify] thresholds high/low", USER_FACE_HIGH_THRESHOLD, USER_FACE_LOW_THRESHOLD);
 
-  //combine OCR and face verification results to determine final verification status
   let finalStatus;
   const updateData = {
     autoVerifyConfidence: faceConfidence,
     autoVerifyHighThreshold: USER_FACE_HIGH_THRESHOLD,
     autoVerifyLowThreshold: USER_FACE_LOW_THRESHOLD,
-    ocrVerificationStatus: ocrResult.verificationStatus, 
-    ocrData: ocrResult.ocrData, 
+    ocrVerificationStatus: ocrResult.verificationStatus, // Store OCR result
+    ocrData: ocrResult.ocrData, // Store extracted data for audit
   };
 
   const ocrVerified = ocrResult.verificationStatus === "VERIFIED";
@@ -165,27 +168,27 @@ async function autoVerifyUserWithOCR(user) {
   console.log("[AutoVerify] faceHigh",faceHighConfidence,"faceLow",faceLowConfidence);
 
   if (ocrAutoRejected) {
-    
+
     finalStatus = "AUTO_REJECTED";
   } else if (ocrBorderline || (ocrVerified && (faceConfidence >= USER_FACE_LOW_THRESHOLD && faceConfidence < USER_FACE_HIGH_THRESHOLD))) {
-    
+
     finalStatus = "PENDING";
   } else if (ocrVerified && faceHighConfidence) {
-    
+
     finalStatus = "VERIFIED";
     updateData.isVerified = true;
   } else if (ocrVerified && faceLowConfidence) {
-    
+
     finalStatus = "AUTO_REJECTED";
   } else {
-    
+
     finalStatus = "PENDING";
   }
   console.log("[AutoVerify] finalStatus", finalStatus);
 
   updateData.verificationStatus = finalStatus;
 
-  //update user
+  // Update user with combined verification results
   await prisma.user.update({
     where: { id: user.id },
     data: updateData,
@@ -203,7 +206,7 @@ async function autoVerifyUserWithOCR(user) {
         ? "Match"
         : faceLowConfidence
         ? "Mismatch"
-        : "Borderline"
+        : "Near match"
     }`,
   };
 }
