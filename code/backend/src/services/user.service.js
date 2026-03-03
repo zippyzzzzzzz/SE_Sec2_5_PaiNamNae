@@ -201,13 +201,39 @@ const updatePassword = async (userId, currentPassword, newPassword) => {
     return { success: true };
 };
 
+// แก้ : เพิ่ม Logic การแปลง nationalIdExpiryDate ให้เป็น Date Object และตรวจสอบฟิลด์ก่อน Update 
 const updateUserProfile = async (id, data) => {
-    // synchronise verificationStatus when isVerified flag is present
-    if (data && Object.prototype.hasOwnProperty.call(data, 'isVerified')) {
-        data.verificationStatus = data.isVerified ? 'VERIFIED' : 'REJECTED';
+    const updatePayload = { ...data };
+
+    // [แก้ไข]: ถ้ามีวันหมดอายุส่งมา ต้องแปลงเป็น Date Object ก่อนบันทึก
+    if (updatePayload.nationalIdExpiryDate) {
+        // ลบทุกอย่างที่ไม่ใช่ตัวเลขออกให้เหลือ 13 หลักล้วน
+        updatePayload.nationalIdNumber = updatePayload.nationalIdNumber.replace(/\D/g, '');
     }
 
-    const updatedUser = await prisma.user.update({ where: { id }, data });
+    // ตรวจสอบและแปลงวันหมดอายุ
+    if (updatePayload.nationalIdExpiryDate) {
+        const dateObj = new Date(updatePayload.nationalIdExpiryDate);
+        
+        // เช็คว่าแปลงเป็นวันที่สำเร็จไหม ถ้าไม่สำเร็จ (Invalid Date) ให้ลบทิ้งไม่ให้ส่งลง DB
+        if (!isNaN(dateObj.getTime())) {
+            updatePayload.nationalIdExpiryDate = dateObj;
+        } else {
+            delete updatePayload.nationalIdExpiryDate;
+            console.error("[Service] Invalid Date Format received from frontend");
+        }
+    }
+
+    // จัดการเรื่องสถานะการยืนยัน
+    if (updatePayload && Object.prototype.hasOwnProperty.call(updatePayload, 'isVerified')) {
+        updatePayload.verificationStatus = updatePayload.isVerified ? 'VERIFIED' : 'REJECTED';
+    }
+
+    // บันทึกลง Prisma (Prisma จะ Update เฉพาะฟิลด์ที่ส่งมาใน updatePayload)
+    const updatedUser = await prisma.user.update({ 
+        where: { id }, 
+        data: updatePayload 
+    });
 
     const { password, ...safeUser } = updatedUser;
     return safeUser;

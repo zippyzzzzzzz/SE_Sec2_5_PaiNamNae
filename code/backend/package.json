@@ -18,12 +18,12 @@
     "bcrypt": "^5.1.1",
     "cloudinary": "^2.7.0",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
+    "dotenv": "^16.6.1",
     "express": "^4.21.2",
     "express-async-handler": "^1.2.0",
     "express-rate-limit": "^7.5.1",
-    "form-data": "^4.0.5",
     "helmet": "^7.2.0",
+    "google-auth-library": "^9.14.2",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",
     "prom-client": "^15.1.2",
@@ -31,10 +31,16 @@
     "swagger-ui-express": "^5.0.1",
     "zod": "^3.23.8"
   },
+
   "devDependencies": {
     "newman": "^6.2.2",
     "newman-reporter-htmlextra": "^1.23.1",
-    "nodemon": "^3.1.2",
-    "prisma": "^5.15.0"
+    "nodemon": "^3.1.14",
+    "prisma": "^5.15.0" 
+  },
+  
+  "prisma": {
+    "seed": "node scripts/seed-sprint1-test-data.js"
   }
+  
 }

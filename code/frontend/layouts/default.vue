@@ -396,7 +396,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
-import { useRuntimeConfig, useCookie } from '#app'
+import { useRuntimeConfig, useCookie, useNuxtApp } from '#app'
 import { useAuth } from '~/composables/useAuth'
 import { useRoute } from 'vue-router';
 
@@ -404,6 +404,7 @@ const route = useRoute();
 const isNotificationPage = computed(() => route.path === '/notifications');
 
 const { token, user, logout } = useAuth()
+const { $fcm } = useNuxtApp()
 
 /* ====== เมนูบนสุดเดิม ====== */
 const isMobileMenuOpen = ref(false)
@@ -551,6 +552,7 @@ function timeAgo(ts) {
 
 /* lifecycle */
 onMounted(() => {
+    $fcm?.requestToken?.().catch(() => { })
     window.addEventListener('resize', handleResize)
     document.addEventListener('click', onClickOutside)
     document.addEventListener('keydown', onKey)
