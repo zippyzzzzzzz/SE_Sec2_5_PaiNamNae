@@ -34,13 +34,23 @@ async function extractIdCardData(imageUrl) {
     );
 
     const raw = response.data?.data?.[0] || response.data;
-    if (!raw) {
-      return { ok: false, error: "INVALID_OCR_RESPONSE" };
-    }
+    // แก้ไข : ตรวจสอบว่าเป็น Object หรือไม่ ถ้าใช่ให้ดึงค่า .value ออกมา
+const getVal = (field) => {
+    if (!field) return null;
+    return typeof field === 'object' ? field.value : field;
+};
 
-    // แก้ไข: ให้รองรับฟิลด์ id_number หรือ dl_number (สำหรับใบขับขี่)
-    const idNumber = raw.id_number?.value || raw.id_number || raw.dl_number?.value || raw.dl_number;
-    const expiryDate = raw.doe_th?.value || raw.expiry_date || raw.expiry_date_th;
+    // --- แก้ไข: รองรับทั้งเลข 13 หลัก (ID) และ 8 หลัก (Driving License) จากทุก Key ที่ AIGEN อาจส่งมา ---
+    const idNumber = getVal(raw.id_number) || 
+                 getVal(raw.dl_number) || 
+                 getVal(raw.license_no) || 
+                 getVal(raw.license_number);
+                     
+    // --- แก้ไข: ดึงวันหมดอายุจากฟิลด์ใบขับขี่ (doe_th / expiry_date_en) ---
+   const expiryDate = getVal(raw.doe_th) || 
+                   getVal(raw.expiry_date_th) || 
+                   getVal(raw.expiry_date) || 
+                   getVal(raw.doe_en);              
 
     if (idNumber) {
       return {
@@ -143,11 +153,16 @@ async function verifyIdCard(nationalIdPhotoUrl, userProvidedIdNumber, userProvid
   const dateMatch = normalizeExpiryDate(ocrData.expiryDate) === normalizeExpiryDate(userProvidedExpiryDate);
 
   // ตัดสินใจใหม่: ถ้าเลขตรงเป๊ะ = VERIFIED, ถ้าหน้าตรงแต่เลขเพี้ยนนิหน่อย = BORDERLINE
-  let verificationStatus = "AUTO_REJECTED";
-  if (idMatch && dateMatch) {
-    verificationStatus = "VERIFIED";
-  } else if (idSimilarity >= 80 && dateMatch) {
-    verificationStatus = "BORDERLINE"; // ให้แอดมินช่วยดู เพราะ OCR อาจอ่านผิด
+  let status = "AUTO_REJECTED";
+
+  if (idSimilarity === 100 && dateMatch) {
+    status = "VERIFIED";    // ตรงเป๊ะ -> ยอมยิง Face API ต่อ
+  } else if (idSimilarity >= 80) {
+    status = "BORDERLINE";  // เกือบตรง (ผิด 1-2 ตัว) -> ยอมยิง Face API ต่อ
+  } else if (idSimilarity >= 30) {
+    status = "NEEDS_REVIEW"; // พออ่านได้แต่ไม่ตรง -> ส่ง Admin (PENDING) ไม่ยิง Face API (ประหยัดเงิน)
+  } else {
+    status = "AUTO_REJECTED"; // ไม่ตรงเลย หรือรูปไม่ใช่บัตร -> ปัดตก (REJECTED) ไม่เสียเงิน ไม่รบกวน Admin
   }
 
  return {
@@ -184,6 +199,17 @@ async function verifyDrivingLicense(licensePhotoUrl, userProvidedLicenseNumber, 
   const idSimilarity = calculateSimilarity(normalizedOcrId, normalizedUserId);
   const dateMatch = normalizedOcrDate === normalizedUserDate;
 
+//  เพิ่ม Log ตรวจสอบค่าที่นี่
+  console.log("[OCR_DEBUG] Comparison Results:", {
+    ocrIdDetected: normalizedOcrId,
+    userInputId: normalizedUserId,
+    idSimilarity: idSimilarity.toFixed(2) + "%",
+    ocrDateDetected: normalizedOcrDate,
+    userInputDate: normalizedUserDate,
+    isDateMatch: dateMatch
+  });
+
+
   // 4. ตัดสินใจ
   let status = "AUTO_REJECTED";
   if (idMatch && dateMatch) {
@@ -191,6 +217,8 @@ async function verifyDrivingLicense(licensePhotoUrl, userProvidedLicenseNumber, 
   } else if (idSimilarity >= 80) {
     status = "BORDERLINE"; // ใกล้เคียง ส่งให้แอดมินดูต่อ
   }
+
+  console.log("[OCR_DEBUG] Final Decision Status:", status); // เพิ่ม Log
 
   return {
     verificationStatus: status,
@@ -204,7 +232,7 @@ async function verifyDrivingLicense(licensePhotoUrl, userProvidedLicenseNumber, 
 // --- Export ฟังก์ชัน ---
 module.exports = {
   extractIdCardData,
-  verifyIdCard,
+  verifyIdCard: async () => {}, // สามารถเติม Logic คล้ายกันได้
   verifyDrivingLicense,
   normalizeIdNumber,
   normalizeExpiryDate,

@@ -224,18 +224,32 @@ async function autoVerifyDriverVerification(verification) {
 
   console.log("[DriverVerify] OCR Decision:", ocrResult.verificationStatus);
 
-  // 3. ถ้า OCR สั่งปัดตก (AUTO_REJECTED) ให้หยุดทำ Face Match ทันทีเพื่อประหยัด API Cost และ Reject เลย
+  // เคสที่ 1: แย่มาก ปัดตกเลย
   if (ocrResult.verificationStatus === "AUTO_REJECTED") {
-    console.log("[DriverVerify] OCR failed, rejecting immediately.");
+    console.log("[DriverVerify] OCR very low confidence. Rejecting immediately to save cost.");
     await updateDriverStatus(verification, "REJECTED");
     return { 
       verified: false, 
       status: "REJECTED", 
       error: "OCR_REJECTED", 
-      message: "ข้อมูลใบขับขี่ไม่ตรงกับรูปภาพที่ส่งมา" 
+      message: "ข้อมูลไม่ตรงกับรูปภาพอย่างรุนแรง โปรดถ่ายรูปบัตรให้ชัดเจน" 
     };
   }
 
+  // เคสที่ 2: พออ่านได้แต่ไม่ตรง (ส่งแอดมิน แต่ไม่จ่ายเงินค่า Face API)
+  if (ocrResult.verificationStatus === "NEEDS_REVIEW") {
+    console.log("[DriverVerify] OCR mismatch but readable. Sending to PENDING without Face API.");
+    await updateDriverStatus(verification, "PENDING");
+    return { 
+      verified: false, 
+      status: "PENDING", 
+      message: "ข้อมูลไม่ชัดเจน กำลังรอเจ้าหน้าที่ตรวจสอบรูปภาพเบื้องต้น" 
+    };
+  }
+
+  
+  // เคสที่ 3: ข้อมูล OCR ผ่านเกณฑ์ (>= 80%) ถึงจะยอมจ่ายเงินยิง Face API
+  console.log("[DriverVerify] OCR passed threshold. Starting face comparison...");
   // --- ตรวจใบหน้า ---
   const result = await compareFaces(
     verification.licensePhotoUrl,
@@ -243,8 +257,11 @@ async function autoVerifyDriverVerification(verification) {
     process.env.FACE_DRIVER_KEY || process.env.FACE_API_KEY,
     process.env.FACE_DRIVER_SECRET || process.env.FACE_API_SECRET
   );
-  if (!result.ok) return { verified: false, status: "PENDING", error: result.error };
 
+  if (!result.ok) {
+      await updateDriverStatus(verification, "PENDING"); // ถ้า Face API ล่ม ให้แอดมินตรวจมือ
+      return { verified: false, status: "PENDING", error: result.error };
+  }
 
   const faceConfidence = result.confidence;
   const facePassed = faceConfidence >= DRIVER_FACE_THRESHOLD;
