@@ -177,7 +177,7 @@ async function verifyIdCard(
     verificationStatus = "VERIFIED";
     message = "ข้อมูลบัตรประชาชนตรงกับที่ระบบสแกนได้";
 
-  } else if (75 < confidence < 100) {
+  } else if (confidence > 75 && confidence < 100) {
 
     verificationStatus = "BORDERLINE";
     message = "ข้อมูลบัตรประชาชนไม่ตรงสมบูรณ์ รอการตรวจสอบเพิ่มเติม";
