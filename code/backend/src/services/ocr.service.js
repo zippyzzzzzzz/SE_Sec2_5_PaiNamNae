@@ -4,11 +4,15 @@ const prisma = require("../utils/prisma");
 const OCR_API_URL = process.env.OCR_API_URL || "https://api.aigen.online/aiscript/idcard/v2";
 const OCR_API_KEY = process.env.AIGEN_OCR_KEY || process.env.OCR_API_KEY;
 
+// --- Helper Functions ---
 async function imageUrlToBase64(imageUrl) {
   const resp = await axios.get(imageUrl, { responseType: "arraybuffer", timeout: 20000 });
   return Buffer.from(resp.data, "binary").toString("base64");
 }
 
+/**
+ * ฟังก์ชันหลักในการยิง API ไปหา AIGEN
+ */
 async function extractIdCardData(imageUrl) {
   console.log("[OCR] using key?", Boolean(OCR_API_KEY));
   if (!OCR_API_KEY) {
@@ -34,7 +38,8 @@ async function extractIdCardData(imageUrl) {
       return { ok: false, error: "INVALID_OCR_RESPONSE" };
     }
 
-    const idNumber = raw.id_number?.value || raw.id_number;
+    // แก้ไข: ให้รองรับฟิลด์ id_number หรือ dl_number (สำหรับใบขับขี่)
+    const idNumber = raw.id_number?.value || raw.id_number || raw.dl_number?.value || raw.dl_number;
     const expiryDate = raw.doe_th?.value || raw.expiry_date || raw.expiry_date_th;
 
     if (idNumber) {
@@ -61,7 +66,7 @@ async function extractIdCardData(imageUrl) {
   }
 }
 
-
+// --- การเตรียมข้อมูลก่อนเปรียบเทียบ ---
 function normalizeIdNumber(idNumber) {
   if (!idNumber) return null;
   return String(idNumber).replace(/[\s\-]/g, "").trim();
@@ -72,134 +77,136 @@ function normalizeExpiryDate(dateStr) {
   
   let date;
   
-  // YYYY-MM-DD
+  // 1. ตรวจสอบ Format YYYY-MM-DD (ISO)
   if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
     date = new Date(dateStr);
-  }
-  // DD/MM/YYYY
+  } 
+  // 2. ตรวจสอบ Format MM/DD/YYYY หรือ DD/MM/YYYY
   else if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
-    const [day, month, year] = dateStr.split("/");
-    date = new Date(`${year}-${month}-${day}`);
-  }
-  // MM/DD/YYYY
-  else if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
-    const [month, day, year] = dateStr.split("/");
-    date = new Date(`${year}-${month}-${day}`);
+    const parts = dateStr.split("/");
+    let month = parseInt(parts[0]);
+    let day = parseInt(parts[1]);
+    let year = parseInt(parts[2]);
+
+    // สลับตำแหน่งถ้ากรอกมาแบบ 03/21/2568 (เดือน/วัน/ปี)
+    // หากเลขตัวกลางเกิน 12 แสดงว่าเป็น 'วัน' แน่นอน
+    if (month <= 12 && day > 12) {
+      // ยืนยันว่าเป็น MM/DD/YYYY
+    } else {
+      // ถ้าไม่ใช่ ให้มองเป็น DD/MM/YYYY ตามมาตรฐานไทยปกติ
+      [day, month] = [month, day];
+    }
+
+    // แก้ไขเรื่องปี พ.ศ. -> ค.ศ.
+    if (year > 2400) {
+      year -= 543;
+    }
+
+    date = new Date(year, month - 1, day);
   }
   
   if (isNaN(date?.getTime())) {
     return null;
   }
   
-  return date.toISOString().split("T")[0]; // Return YYYY-MM-DD
+  // คืนค่าเป็น YYYY-MM-DD เสมอเพื่อใช้เปรียบเทียบกับ OCR
+  return date.toISOString().split("T")[0];
 }
 
 function calculateSimilarity(str1, str2) {
   if (!str1 || !str2) return 0;
-  
   const s1 = String(str1).toLowerCase().trim();
   const s2 = String(str2).toLowerCase().trim();
-  
   if (s1 === s2) return 100;
-  
   let matches = 0;
   const maxLen = Math.max(s1.length, s2.length);
-  
   for (let i = 0; i < Math.min(s1.length, s2.length); i++) {
     if (s1[i] === s2[i]) matches++;
   }
-  
   return (matches / maxLen) * 100;
 }
 
-async function verifyIdCard(
-  nationalIdPhotoUrl,
-  userProvidedIdNumber,
-  userProvidedExpiryDate
-) {
-  // Extract data from OCR
+// --- ฟังก์ชันยืนยันบัตรประชาชน (User ทั่วไป) ---
+async function verifyIdCard(nationalIdPhotoUrl, userProvidedIdNumber, userProvidedExpiryDate) {
   const ocrResult = await extractIdCardData(nationalIdPhotoUrl);
+  if (!ocrResult.ok) {
+    return { verificationStatus: "AUTO_REJECTED", message: "สแกนไม่สำเร็จ", confidence: 0 };
+  }
+
+  const ocrData = ocrResult.data;
+  const normalizedOcrId = normalizeIdNumber(ocrData.idNumber);
+  const normalizedUserId = normalizeIdNumber(userProvidedIdNumber);
+  
+  // เปลี่ยนตรงนี้: จาก === เป็นการดู Similarity
+  const idSimilarity = calculateSimilarity(normalizedOcrId, normalizedUserId);
+  const idMatch = idSimilarity === 100;
+  const dateMatch = normalizeExpiryDate(ocrData.expiryDate) === normalizeExpiryDate(userProvidedExpiryDate);
+
+  // ตัดสินใจใหม่: ถ้าเลขตรงเป๊ะ = VERIFIED, ถ้าหน้าตรงแต่เลขเพี้ยนนิหน่อย = BORDERLINE
+  let verificationStatus = "AUTO_REJECTED";
+  if (idMatch && dateMatch) {
+    verificationStatus = "VERIFIED";
+  } else if (idSimilarity >= 80 && dateMatch) {
+    verificationStatus = "BORDERLINE"; // ให้แอดมินช่วยดู เพราะ OCR อาจอ่านผิด
+  }
+
+ return {
+    verificationStatus,
+    ocrData,
+    idNumberMatch: idMatch,
+    idNumberSimilarity: idSimilarity, // ส่งค่านี้กลับไปดูด้วย
+    expiryDateMatch: dateMatch,
+    message: idMatch ? "ข้อมูลตรงกัน" : `เลขบัตรใกล้เคียง (${idSimilarity.toFixed(2)}%)`
+  };
+}
+
+
+// --- ฟังก์ชันยืนยันใบขับขี่ (Driver) มีความยืดหยุ่นกว่าบัตรประชาชนเล็กน้อยด้วย Similarity ---
+//1. ตรวจเลขใบขับขี่ + วันหมดอายุ (OCR)
+async function verifyDrivingLicense(licensePhotoUrl, userProvidedLicenseNumber, userProvidedExpiryDate) {
+  // 1. ดึงข้อมูลจากรูป
+  const ocrResult = await extractIdCardData(licensePhotoUrl);
   
   if (!ocrResult.ok) {
-    return {
-      verificationStatus: "AUTO_REJECTED",
-      error: ocrResult.error,
-      message: "ไม่สามารถสแกนบัตรประชาชนได้ กรุณาส่งรูปที่ชัดเจนขึ้น",
-      confidence: 0,
-    };
+    return { verificationStatus: "AUTO_REJECTED", error: ocrResult.error, confidence: 0 };
   }
 
   const ocrData = ocrResult.data;
   
-  // Normalize values for comparison
+  // 2. Normalize ข้อมูล
   const normalizedOcrId = normalizeIdNumber(ocrData.idNumber);
-  const normalizedUserId = normalizeIdNumber(userProvidedIdNumber);
-  
+  const normalizedUserId = normalizeIdNumber(userProvidedLicenseNumber);
   const normalizedOcrDate = normalizeExpiryDate(ocrData.expiryDate);
   const normalizedUserDate = normalizeExpiryDate(userProvidedExpiryDate);
   
-  // Check ID number match
-  const idNumberMatch = normalizedOcrId === normalizedUserId;
-  const idNumberSimilarity = calculateSimilarity(
-    normalizedOcrId,
-    normalizedUserId
-  );
-  
-  // Check expiry date match (exact date or within 1 day tolerance)
-  const expiryDateMatch =
-    normalizedOcrDate === normalizedUserDate ||
-    (normalizedOcrDate &&
-      normalizedUserDate &&
-      Math.abs(
-        new Date(normalizedOcrDate) - new Date(normalizedUserDate)
-      ) <= 86400000); // 1 day in ms
-  
-  const expiryDateSimilarity = expiryDateMatch ? 100 : calculateSimilarity(
-    normalizedOcrDate || "",
-    normalizedUserDate || ""
-  );
-  
-  // Calculate overall confidence
-  const confidence = (idNumberSimilarity + expiryDateSimilarity) / 2;
-  
-  // Determine verification status
-  let verificationStatus;
-  let message;
-  
-  if (idNumberMatch && expiryDateMatch) {
-    
-    verificationStatus = "VERIFIED";
-    message = "ข้อมูลบัตรประชาชนตรงกับที่ระบบสแกนได้";
-  } else if (confidence >= 75) {
+  // 3. คำนวณความเหมือน (ป้องกัน OCR อ่านผิดบางตัว)
+  const idMatch = normalizedOcrId === normalizedUserId;
+  const idSimilarity = calculateSimilarity(normalizedOcrId, normalizedUserId);
+  const dateMatch = normalizedOcrDate === normalizedUserDate;
 
-    verificationStatus = "BORDERLINE";
-    message = "ข้อมูลบัตรประชาชนใกล้เคียง รอการตรวจสอบเพิ่มเติม";
-  } else {
-
-    verificationStatus = "AUTO_REJECTED";
-    message = "ข้อมูลบัตรประชาชนไม่ตรงกับข้อมูลที่ระบบสแกนได้";
+  // 4. ตัดสินใจ
+  let status = "AUTO_REJECTED";
+  if (idMatch && dateMatch) {
+    status = "VERIFIED"; // ตรงเป๊ะ
+  } else if (idSimilarity >= 80) {
+    status = "BORDERLINE"; // ใกล้เคียง ส่งให้แอดมินดูต่อ
   }
-  
+
   return {
-    verificationStatus,
-    ocrData: {
-      idNumber: ocrData.idNumber,
-      expiryDate: ocrData.expiryDate,
-      name: ocrData.name,
-      dateOfBirth: ocrData.dateOfBirth,
-    },
-    idNumberMatch,
-    idNumberSimilarity: Math.round(idNumberSimilarity * 100) / 100,
-    expiryDateMatch,
-    expiryDateSimilarity: Math.round(expiryDateSimilarity * 100) / 100,
-    confidence: Math.round(confidence * 100) / 100,
-    message,
+    verificationStatus: status,
+    idNumberMatch: idMatch,
+    expiryDateMatch: dateMatch,
+    confidence: idSimilarity,
+    ocrData: ocrData
   };
 }
 
+// --- Export ฟังก์ชัน ---
 module.exports = {
   extractIdCardData,
   verifyIdCard,
+  verifyDrivingLicense,
   normalizeIdNumber,
   normalizeExpiryDate,
+  calculateSimilarity
 };

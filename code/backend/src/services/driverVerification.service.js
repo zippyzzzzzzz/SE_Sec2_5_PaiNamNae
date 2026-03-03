@@ -108,14 +108,23 @@ const getVerificationById = async (id) => {
   });
 };
 
+// แก้ เปลี่ยนมาเช็คข้อมูลเก่าก่อนสร้างใหม่ เพื่อแก้ปัญหา 409 Conflict 
+// และทำให้ User สามารถกดส่งซ้ำเพื่ออัปเดตข้อมูลได้
+
 const createVerification = async (data) => {
+  // เช็คก่อนว่า User นี้เคยมี Record ในตารางนี้หรือยัง
   const existing = await getVerificationByUser(data.userId)
+  
   if (existing) {
+    // [แก้ไข] ถ้ามีอยู่แล้วให้ Update แทน Create เพื่อหลีกเลี่ยง Error เลขใบขับขี่ซ้ำ (Unique Constraint)
+    console.log(`[Service] Existing record found for user ${data.userId}, switching to update mode.`);
     return updateVerification(existing.id, data)
   }
 
+  // ถ้ายังไม่เคยมี ให้สร้างใหม่ใน Transaction
   return prisma.$transaction(async (tx) => {
     const newRec = await tx.driverVerification.create({ data });
+    
     await tx.user.update({
       where: { id: data.userId },
       data: { role: 'DRIVER' },
@@ -127,8 +136,9 @@ const createVerification = async (data) => {
 const updateVerification = async (id, data) => {
   const updatePayload = {
     ...data,
-    status: 'PENDING'
+    status: 'PENDING' // บังคับ Reset สถานะเป็น PENDING เมื่อมีการอัปเดตข้อมูลใหม่
   };
+
   return prisma.driverVerification.update({
     where: { id },
     data: updatePayload,
@@ -169,16 +179,20 @@ const deleteVerificationByAdmin = async (id) => {
   });
 };
 
+//ปรับ Logic การอัปเดตสถานะให้ครอบคลุมถึงตาราง User เพื่อให้ isVerified ใน User ตรงกับผลการ APPROVED/REJECTED
 const updateVerificationStatus = async (id, status) => {
   return prisma.$transaction(async (tx) => {
     const verification = await tx.driverVerification.update({
       where: { id },
       data: { status },
     });
+
     if (status === 'APPROVED') {
       await tx.user.update({
         where: { id: verification.userId },
-        data: { isVerified: true, role: 'DRIVER' },
+        data: { isVerified: true,
+                role: 'DRIVER',
+                 }, 
       });
     }
     else if (status === 'REJECTED') {
@@ -186,10 +200,11 @@ const updateVerificationStatus = async (id, status) => {
         where: { id: verification.userId },
         data: {
           role: 'PASSENGER',
-          isVerified: false,
+          isVerified: false
         },
       });
 
+      // ยกเลิกงานขับรถที่ยังเปิดค้างอยู่
       await tx.route.updateMany({
         where: {
           driverId: verification.userId,
