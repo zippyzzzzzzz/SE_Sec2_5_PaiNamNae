@@ -121,6 +121,12 @@ async function verifyIdCard(
   const ocrResult = await extractIdCardData(nationalIdPhotoUrl);
   
   if (!ocrResult.ok) {
+
+    await prisma.user.update({
+      where: { id: userId }, // ใส่ field ให้ตรงกับของคุณ
+      data: { verificationStatus: "AUTO_REJECTED" },
+    });
+
     return {
       verificationStatus: "AUTO_REJECTED",
       error: ocrResult.error,
