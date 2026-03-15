@@ -37,7 +37,7 @@
           <div v-if="bookingData" class="grid grid-cols-2 gap-4 text-sm">
             <div>
               <p class="text-gray-500">เส้นทาง</p>
-              <p class="text-gray-900 font-medium">{{ bookingData.route?.locationFrom }} → {{ bookingData.route?.locationTo }}</p>
+              <p class="text-gray-900 font-medium">{{ bookingData.route?.locationFrom?.name || bookingData.route?.locationFrom?.address }} → {{ bookingData.route?.locationTo?.name || bookingData.route?.locationTo?.address }}</p>
             </div>
             <div>
               <p class="text-gray-500">วันที่</p>
@@ -112,9 +112,6 @@
               <label class="block text-sm text-gray-700 mb-2">
                 ไฟล์มีเดีย: รูปภาพและวิดีโอ (สูงสุด 3 ไฟล์รวม)
               </label>
-              <p class="text-xs text-gray-500 mb-3">
-                💡 ตัวอย่าง: 3 รูป, 2 รูป + 1 วิดีโอ, 1 รูป + 1 วิดีโอ เป็นต้น
-              </p>
               <div 
                 @drop="handleMediaDrop"
                 @dragover.prevent="isDraggingMedia = true"
@@ -370,13 +367,6 @@ const processMediaFiles = (files) => {
     } else if (isVideo) {
       if (file.size > 30 * 1024 * 1024) {
         reportService.error = `ไฟล์วิดีโอ "${file.name}" เกิน 30 MB`
-        return
-      }
-
-      // Check if already have a video
-      const hasVideo = selectedMedia.value.some(m => m.type === 'video')
-      if (hasVideo) {
-        reportService.error = 'สามารถเพิ่มวิดีโอได้เพียง 1 ไฟล์เท่านั้น'
         return
       }
     }

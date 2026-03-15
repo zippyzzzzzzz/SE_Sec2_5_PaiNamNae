@@ -79,11 +79,7 @@ const createReport = asyncHandler(async (req, res) => {
       const uploadResult = await uploadToCloudinary(file.buffer, "reports/images");
       uploadedImages.push(uploadResult.url);
     } else if (isVideo) {
-      // Validate video - only allow 1 video maximum
-      if (videoCount >= 1) {
-        throw new ApiError(400, "Maximum 1 video file allowed");
-      }
-
+      // Validate video
       if (file.size > VALIDATION.VIDEO_MAX_SIZE) {
         throw new ApiError(400, `Video exceeds ${VALIDATION.VIDEO_MAX_SIZE / (1024 * 1024)} MB limit`);
       }
@@ -94,9 +90,8 @@ const createReport = asyncHandler(async (req, res) => {
 
       videoCount++;
 
-      // Upload video to Cloudinary
-      // Note: uploadToCloudinary defaults to image, but we'll handle video upload directly
-      const uploadResult = await uploadToCloudinary(file.buffer, "reports/videos");
+      // Upload video to Cloudinary with video resource type
+      const uploadResult = await uploadToCloudinary(file.buffer, "reports/videos", "video");
       uploadedVideo = uploadResult.url;
     }
   }
