@@ -45,7 +45,7 @@ const createReport = asyncHandler(async (req, res) => {
   }
 
   const uploadedImages = [];
-  let uploadedVideo = null;
+  const uploadedVideos = [];
   let videoCount = 0;
   let imageCount = 0;
 
@@ -92,7 +92,7 @@ const createReport = asyncHandler(async (req, res) => {
 
       // Upload video to Cloudinary with video resource type
       const uploadResult = await uploadToCloudinary(file.buffer, "reports/videos", "video");
-      uploadedVideo = uploadResult.url;
+      uploadedVideos.push(uploadResult.url);
     }
   }
 
@@ -103,7 +103,7 @@ const createReport = asyncHandler(async (req, res) => {
     reportTopic,
     reportDescription,
     reportImages: uploadedImages.length > 0 ? uploadedImages : null,
-    reportVideo: uploadedVideo,
+    reportVideos: uploadedVideos.length > 0 ? uploadedVideos : null,
     contactFirstName,
     contactLastName,
     contactPhoneNumber,

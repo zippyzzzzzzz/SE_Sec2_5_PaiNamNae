@@ -5,7 +5,7 @@ const ApiError = require("../utils/ApiError");
 class ReportService {
   // Create a new report
   async createReport(reportData, passengerId) {
-    const { bookingId, category, reportTopic, reportDescription, reportImages, reportVideo, contactFirstName, contactLastName, contactPhoneNumber, contactEmail } = reportData;
+    const { bookingId, category, reportTopic, reportDescription, reportImages, reportVideos, contactFirstName, contactLastName, contactPhoneNumber, contactEmail } = reportData;
 
     // Validate booking exists
     const booking = await prisma.booking.findUnique({
@@ -67,7 +67,7 @@ class ReportService {
         reportTopic,
         reportDescription,
         reportImages: reportImages || null,
-        reportVideo: reportVideo || null,
+        reportVideos: reportVideos || null,
         contactFirstName: contactInfo.firstName,
         contactLastName: contactInfo.lastName,
         contactPhoneNumber: contactInfo.phoneNumber,

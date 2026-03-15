@@ -279,7 +279,7 @@ model Report {
   reportTopic       String
   reportDescription String
   reportImages      Json?           @db.Json          // Array of Cloudinary URLs: ["url1", "url2", "url3"]
-  reportVideo       String?                           // Cloudinary URL (single file)
+  reportVideos      Json?           @db.Json          // Array of Cloudinary URLs: ["url1", "url2"]
   
   contactFirstName  String?
   contactLastName   String?

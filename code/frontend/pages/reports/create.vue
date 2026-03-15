@@ -172,9 +172,10 @@
                     <button 
                       type="button"
                       @click="removeMedia(index)"
-                      class="p-1 text-red-500 hover:bg-red-50 rounded transition"
+                      class="flex-shrink-0 px-3 py-1 ml-2 text-xs font-semibold text-white bg-red-500 hover:bg-red-600 rounded-lg transition duration-150 ease-in-out"
+                      title="ลบไฟล์นี้"
                     >
-                      <Icon name="mdi:close" class="w-5 h-5" />
+                      ลบ
                     </button>
                   </div>
                 </div>
@@ -186,6 +187,31 @@
               </div>
             </div>
           </div>
+
+          <!-- Alert Message -->
+          <Transition
+            name="fade-slide"
+            @enter="onAlertEnter"
+            @leave="onAlertLeave"
+          >
+            <div 
+              v-if="showAlert && reportService.error" 
+              class="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm flex items-start gap-3"
+              :style="{ opacity: alertOpacity }"
+            >
+              <Icon name="mdi:alert-circle" class="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <div class="flex-1">
+                {{ reportService.error }}
+              </div>
+              <button
+                type="button"
+                @click="dismissAlert"
+                class="text-red-400 hover:text-red-600 flex-shrink-0"
+              >
+                <Icon name="mdi:close" class="w-5 h-5" />
+              </button>
+            </div>
+          </Transition>
 
           <!-- Contact Info Section -->
           <div class="bg-gray-50 rounded-lg p-4">
@@ -229,11 +255,6 @@
             </div>
           </div>
 
-          <!-- Error Message -->
-          <div v-if="reportService.error" class="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">
-            {{ reportService.error }}
-          </div>
-
           <!-- Form Actions -->
           <div class="flex gap-4 pt-4 border-t">
             <button 
@@ -259,7 +280,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useReport } from '@/composables/useReport'
 import { useAuth } from '@/composables/useAuth'
@@ -288,6 +309,10 @@ const contactEmail = ref('')
 
 // UI State
 const isDraggingMedia = ref(false)
+const showAlert = ref(false)
+const alertOpacity = ref(1)
+let alertTimeoutId = null
+let alertDismissTimeoutId = null
 
 // Refs
 const mediaInput = ref(null)
@@ -348,7 +373,7 @@ const processMediaFiles = (files) => {
   // Check total count (max 3 files)
   const totalFiles = selectedMedia.value.length + validFiles.length
   if (totalFiles > 3) {
-    reportService.error = `ไม่สามารถเพิ่มไฟล์ได้ เพราะจะเกิน 3 ไฟล์ (ปัจจุบัน: ${selectedMedia.value.length}, เพิ่มเติม: ${validFiles.length})`
+    showErrorAlert(`ไม่สามารถเพิ่มไฟล์ได้ เพราะจะเกิน 3 ไฟล์ (ปัจจุบัน: ${selectedMedia.value.length}, เพิ่มเติม: ${validFiles.length})`)
     return
   }
 
@@ -361,12 +386,12 @@ const processMediaFiles = (files) => {
     // Validate file type and size
     if (isImage) {
       if (file.size > 10 * 1024 * 1024) {
-        reportService.error = `ไฟล์รูปภาพ "${file.name}" เกิน 10 MB`
+        showErrorAlert(`ไฟล์รูปภาพ "${file.name}" เกิน 10 MB`)
         return
       }
     } else if (isVideo) {
       if (file.size > 30 * 1024 * 1024) {
-        reportService.error = `ไฟล์วิดีโอ "${file.name}" เกิน 30 MB`
+        showErrorAlert(`ไฟล์วิดีโอ "${file.name}" เกิน 30 MB`)
         return
       }
     }
@@ -393,6 +418,44 @@ const getTotalMediaSize = () => {
   return (totalBytes / 1024 / 1024).toFixed(2)
 }
 
+// Alert Management
+const showErrorAlert = (message) => {
+  reportService.error = message
+  showAlert.value = true
+  alertOpacity.value = 1
+  
+  // Clear existing timeouts
+  if (alertTimeoutId) clearTimeout(alertTimeoutId)
+  if (alertDismissTimeoutId) clearTimeout(alertDismissTimeoutId)
+  
+  // Hide alert after 15 seconds
+  alertTimeoutId = setTimeout(() => {
+    alertOpacity.value = 0
+    alertDismissTimeoutId = setTimeout(() => {
+      showAlert.value = false
+      reportService.error = ''
+    }, 300) // Match transition duration
+  }, 15000)
+}
+
+const dismissAlert = () => {
+  if (alertDismissTimeoutId) clearTimeout(alertDismissTimeoutId)
+  if (alertTimeoutId) clearTimeout(alertTimeoutId)
+  alertOpacity.value = 0
+  alertDismissTimeoutId = setTimeout(() => {
+    showAlert.value = false
+    reportService.error = ''
+  }, 300)
+}
+
+const onAlertEnter = (el) => {
+  el.style.transition = 'opacity 0.3s ease, transform 0.3s ease'
+}
+
+const onAlertLeave = (el) => {
+  el.style.transition = 'opacity 0.3s ease, transform 0.3s ease'
+}
+
 // Form Validation
 const isFormValid = computed(() => {
   return (
@@ -408,18 +471,18 @@ const isFormValid = computed(() => {
 // Submit Report
 const submitReport = async () => {
   if (!isFormValid.value) {
-    reportService.error = 'กรุณากรอกข้อมูลที่จำเป็นทั้งหมด'
+    showErrorAlert('กรุณากรอกข้อมูลที่จำเป็นทั้งหมด')
     return
   }
 
   if (selectedMedia.value.length === 0) {
-    reportService.error = 'กรุณาเพิ่มหลักฐานอย่างน้อย 1 ไฟล์ (รูปภาพหรือวิดีโอ)'
+    showErrorAlert('กรุณาเพิ่มหลักฐานอย่างน้อย 1 ไฟล์ (รูปภาพหรือวิดีโอ)')
     return
   }
 
   try {
     loading.value = true
-    reportService.error = ''
+    dismissAlert()
 
     // Prepare form data
     const formData = new FormData()
@@ -444,14 +507,43 @@ const submitReport = async () => {
     await router.push('/reports/tracking')
   } catch (error) {
     console.error('Error submitting report:', error)
-    reportService.error = error.message || 'เกิดข้อผิดพลาดในการส่งรายงาน'
+    showErrorAlert(error.message || 'เกิดข้อผิดพลาดในการส่งรายงาน')
   } finally {
     loading.value = false
   }
+}
+
+// Cleanup on unmount
+const onUnmounted = () => {
+  if (alertTimeoutId) clearTimeout(alertTimeoutId)
+  if (alertDismissTimeoutId) clearTimeout(alertDismissTimeoutId)
 }
 
 // Initialize on mount
 onMounted(() => {
   fetchBookingData()
 })
+
+// Cleanup on unmount
+onBeforeUnmount(() => {
+  onUnmounted()
+})
 </script>
+
+<style scoped>
+/* Fade and slide transition for alerts */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.3s ease;
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+</style>

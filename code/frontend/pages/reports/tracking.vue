@@ -168,13 +168,11 @@
               <p class="text-gray-700 text-sm mb-4">{{ report.reportDescription }}</p>
 
               <!-- Evidence -->
-              <div v-if="report.reportImages || report.reportVideo" class="mb-4">
+              <div v-if="report.reportImages || report.reportVideos" class="mb-4">
                 <p class="text-sm font-semibold text-gray-700 mb-2">หลักฐาน</p>
                 <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
                   <img v-for="(img, idx) in (report.reportImages || [])" :key="`img-${idx}`" :src="img" :alt="`Evidence ${idx}`" class="w-full h-24 object-cover rounded-lg cursor-pointer hover:opacity-80" />
-                </div>
-                <div v-if="report.reportVideo" class="mt-3">
-                  <video :src="report.reportVideo" controls class="w-full h-32 rounded-lg bg-gray-900" />
+                  <video v-for="(vid, idx) in (report.reportVideos || [])" :key="`vid-${idx}`" :src="vid" controls class="w-full h-24 rounded-lg bg-gray-900" />
                 </div>
               </div>
 
