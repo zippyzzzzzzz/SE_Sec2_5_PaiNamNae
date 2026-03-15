@@ -46,6 +46,23 @@ enum CancelReason {
   COMMUNICATION_ISSUE          // สื่อสารไม่สะดวก/ติดต่อไม่ได้
 }
 
+enum ReportCategory {
+  INAPPROPRIATE_BEHAVIOR       // พฤติกรรมที่ไม่เหมาะสม
+  LOST_ITEM                    // ลืมของ
+  CLEANLINESS                  // ความสะอาด
+  OTHER                        // อื่นๆ
+  VIOLATED_AGREEMENT           // ละเมิดข้อตกลง
+  DETAILS_MISMATCH             // รายละเอียดไม่ตรงกับในระบบ
+}
+
+enum ReportStatus {
+  PENDING                      // รอดำเนินการ
+  UNDER_REVIEW                 // กำลังตรวจสอบ
+  CONTACTING_DRIVER            // กำลังติดต่อคนขับ
+  RESOLVED                     // แก้ไขแล้ว
+  CLOSED                       // ปิด
+}
+
 enum LicenseType {
   PRIVATE_CAR_TEMPORARY // รถยนต์ส่วนบุคคลชั่วคราว (2 ปี)
   PRIVATE_CAR          // รถยนต์ส่วนบุคคล (5 ปี)
@@ -229,6 +246,7 @@ model Booking {
 
   //New from Weerawong
   message         Message[]
+  reports         Report[]
 }
 
 //New from Weerawong
@@ -248,4 +266,34 @@ model Message {
   senderId       String
   booking        Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   sender         User          @relation("SenderRelation", fields: [senderId], references: [id])
+}
+
+model Report {
+  id                String          @id @default(cuid())
+  bookingId         String
+  booking           Booking         @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  passengerId       String
+  // Note: passenger can be accessed via booking.passengerId
+  
+  category          ReportCategory
+  reportTopic       String
+  reportDescription String
+  reportImages      Json?           @db.Json          // Array of Cloudinary URLs: ["url1", "url2", "url3"]
+  reportVideo       String?                           // Cloudinary URL (single file)
+  
+  contactFirstName  String?
+  contactLastName   String?
+  contactPhoneNumber String?
+  contactEmail      String?
+  
+  reportStatus      ReportStatus    @default(PENDING)
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([bookingId])
+  @@index([passengerId])
+  @@index([reportStatus])
+  @@index([createdAt])
+  @@index([reportStatus, createdAt])
 }
