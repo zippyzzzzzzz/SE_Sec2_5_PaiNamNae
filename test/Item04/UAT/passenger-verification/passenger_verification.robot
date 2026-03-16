@@ -3,28 +3,17 @@ Library           RequestsLibrary
 Library           Collections
 Library           String
 Library           OperatingSystem
-Library           DatabaseLibrary
 
-Suite Setup       Setup Suite
-Test Teardown     Cleanup Test User
-Suite Teardown    Disconnect From Database
+Suite Setup       Create API Session
 Test Template     Execute Passenger Verification Case
 
 
 *** Variables ***
 ${BASE_URL}                  https://cp353004-team2-5.onrender.com
-
-${DB_NAME}        painamnae
-${DB_USER}        painamnae_user
-${DB_PASSWORD}    Pr6fiVGTVGaAZrZsErYEfcvKmOb3efhW
-${DB_HOST}        dpg-d668h26r433s73dd1h0g-a.singapore-postgres.render.com
-${DB_PORT}        5432
-
 ${USER_API_PREFIX}           /api/users
 ${PASSWORD}                  Test1234!
 ${TIMEOUT}                   60s
 ${POLL_INTERVAL}             3s
-${CURRENT_EMAIL}  ${EMPTY}
 
 ${MATCH_NATIONAL_ID}         3411700830334
 ${MATCH_EXPIRY_DATE}         2025-03-21T00:00:00.000Z
@@ -56,17 +45,8 @@ TC6 Face Mismatch + Card Valid + OCR Mismatch -> FAIL
 
 
 *** Keywords ***
-
-Setup Suite
-    Create Session    api    ${BASE_URL}    verify=True
-
-    Connect To Database
-    ...    psycopg2
-    ...    database=${DB_NAME}
-    ...    user=${DB_USER}
-    ...    password=${DB_PASSWORD}
-    ...    host=${DB_HOST}
-    ...    port=${DB_PORT}
+Create API Session
+    Create Session    api    ${BASE_URL}
 
 Create Unique Email
     ${rand}=    Generate Random String    8    [LOWER]
@@ -88,11 +68,7 @@ Create Unique National ID
     RETURN    ${nid}
 
 Register Passenger User
-
     [Arguments]    ${email}    ${nationalId}    ${expiryDate}    ${cardPath}    ${selfiePath}
-    
-    Set Suite Variable    ${CURRENT_EMAIL}    ${email}
-    
     ${username}=    Create Unique Username
     ${phone}=       Create Unique Phone Number
 
@@ -206,15 +182,3 @@ Execute Passenger Verification Case
     ...    Verify Passenger Outcome
     ...    ${token}
     ...    ${expectedResult}
-
-
-Cleanup Test User
-    Run Keyword And Ignore Error    Execute Sql String    ROLLBACK;
-
-    Run Keyword If    '${CURRENT_EMAIL}' != '' and '${CURRENT_EMAIL}' != '${None}'
-    ...    Execute Sql String
-    ...    DELETE FROM "User" WHERE "email"='${CURRENT_EMAIL}';
-
-    Run Keyword And Ignore Error    Execute Sql String    COMMIT;
-
-    Set Suite Variable    ${CURRENT_EMAIL}    ${EMPTY}

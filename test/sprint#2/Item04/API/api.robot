@@ -9,6 +9,7 @@ Suite Setup       Setup Suite
 Test Teardown     Cleanup Test User
 Suite Teardown    Disconnect From Database
 
+
 *** Variables ***
 ${BASE_URL}       https://cp353004-team2-5.onrender.com
 ${API_PREFIX}     /api/users

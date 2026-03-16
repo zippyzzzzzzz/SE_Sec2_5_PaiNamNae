@@ -122,6 +122,7 @@ Verify DB Status
     ${ocrStatus}=    Set Variable    ${res[0][2]}
     ${ocrData}=      Set Variable    ${res[0][3]}
     Log To Console    >>> OCR status from DB: ${ocrStatus}
+    Log To Console    >>> OCR data from DB: ${ocrData}
 
 Test Verify Success
     Go To    ${BASE_URL}/login

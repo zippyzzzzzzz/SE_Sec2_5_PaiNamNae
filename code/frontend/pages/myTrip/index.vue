@@ -48,6 +48,8 @@
                                                 class="status-badge status-rejected">ปฏิเสธ</span>
                                             <span v-else-if="trip.status === 'cancelled'"
                                                 class="status-badge status-cancelled">ยกเลิก</span>
+                                            <span v-else-if="trip.status === 'completed'"
+                                                class="status-badge status-completed">จบทริปแล้ว</span>
                                         </div>
                                         <p class="mt-1 text-sm text-gray-600">จุดนัดพบ: {{ trip.pickupPoint }}</p>
                                         <p class="text-sm text-gray-600">
@@ -163,6 +165,17 @@
                                             แชทกับผู้ขับ
                                         </button>
                                     </template>
+
+                                    <!-- COMPLETED: แสดงปุ่ม Report หรือ Expired -->
+                                    <button v-if="trip.status === 'completed' && !isReportWindowClosed(trip)" @click.stop="goToReport(trip)"
+                                        class="px-4 py-2 text-sm text-white transition duration-200 bg-orange-600 rounded-md hover:bg-orange-700">
+                                        รายงานปัญหา
+                                    </button>
+                                    <button v-else-if="trip.status === 'completed'" @click.stop="goToReport(trip)"
+                                        class="px-4 py-2 text-sm text-white transition duration-200 bg-gray-400 rounded-md cursor-not-allowed"
+                                        disabled>
+                                        เลยเวลารายงาน
+                                    </button>
 
                                     <!-- REJECTED / CANCELLED: ลบได้ -->
                                     <button v-else-if="['rejected', 'cancelled'].includes(trip.status)"
@@ -286,6 +299,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import 'dayjs/locale/th'
 import buddhistEra from 'dayjs/plugin/buddhistEra'
@@ -298,6 +312,7 @@ dayjs.extend(buddhistEra)
 
 const { $api } = useNuxtApp()
 const { toast } = useToast()
+const router = useRouter()
 
 // --- State Management ---
 const activeTab = ref('pending')
@@ -325,6 +340,7 @@ const tabs = [
     { status: 'confirmed', label: 'ยืนยันแล้ว' },
     { status: 'rejected', label: 'ปฏิเสธ' },
     { status: 'cancelled', label: 'ยกเลิก' },
+    { status: 'completed', label: 'จบทริปแล้ว' },
     { status: 'all', label: 'ทั้งหมด' }
 ]
 
@@ -360,6 +376,8 @@ const quickRepliesPassenger = [
 ]
 const canSendMessage = computed(() => messageContent.value.trim().length > 0)
 
+
+
 // --- Computed Properties ---
 const filteredTrips = computed(() => {
     if (activeTab.value === 'all') return allTrips.value
@@ -369,6 +387,21 @@ const filteredTrips = computed(() => {
 const selectedTrip = computed(() => {
     return allTrips.value.find((trip) => trip.id === selectedTripId.value) || null
 })
+
+const isReportWindowClosed = (trip) => {
+    if (trip.status !== 'completed' || !trip.completedDate) return false
+    const completedAt = new Date(trip.completedDate)
+    const now = new Date()
+    const daysDiff = (now - completedAt) / (1000 * 60 * 60 * 24)
+    return daysDiff > 3
+}
+
+const getDaysPassedSinceCompletion = (trip) => {
+    if (!trip.completedDate) return 0
+    const completedAt = new Date(trip.completedDate)
+    const now = new Date()
+    return Math.floor((now - completedAt) / (1000 * 60 * 60 * 24))
+}
 
 function cleanAddr(a) {
     return (a || '')
@@ -436,7 +469,7 @@ async function fetchMyTrips() {
 
             return {
                 id: b.id,
-                status: String(b.status || '').toLowerCase(),
+                status: b.route.status === 'COMPLETED' ? 'completed' : String(b.status || '').toLowerCase(),
                 origin: start?.name || `(${Number(start.lat).toFixed(2)}, ${Number(start.lng).toFixed(2)})`,
                 destination: end?.name || `(${Number(end.lat).toFixed(2)}, ${Number(end.lng).toFixed(2)})`,
                 originAddress: start?.address ? cleanAddr(start.address) : null,
@@ -446,6 +479,7 @@ async function fetchMyTrips() {
                 pickupPoint: b.pickupLocation?.name || '-',
                 date: dayjs(b.route.departureTime).format('D MMMM BBBB'),
                 time: dayjs(b.route.departureTime).format('HH:mm น.'),
+                completedDate: b.route.updatedAt,
                 price: (b.route.pricePerSeat || 0) * (b.numberOfSeats || 1),
                 seats: b.numberOfSeats || 1,
                 driver: driverData,
@@ -757,6 +791,15 @@ const applyQuickReply = (text) => {
     nextTick(() => messageTextareaRef.value?.focus())
 }
 
+const goToReport = (trip) => {
+    if (!isReportWindowClosed(trip)) {
+        router.push({
+            path: '/reports/create',
+            query: { bookingId: trip.id }
+        })
+    }
+}
+
 watch(messageContent, (val) => {
     if (val.length > maxMessageLength) {
         messageContent.value = val.slice(0, maxMessageLength)
@@ -946,6 +989,11 @@ function initializeMap() {
 .status-cancelled {
     background-color: #f3f4f6;
     color: #6b7280;
+}
+
+.status-completed {
+    background-color: #dbeafe;
+    color: #0c4a6e;
 }
 
 @keyframes slide-in-from-top {
