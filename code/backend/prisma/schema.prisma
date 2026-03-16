@@ -208,6 +208,7 @@ model Route {
   status          RouteStatus @default(AVAILABLE)
   cancelledAt     DateTime?
   cancelledBy     String?     // 'DRIVER' | 'ADMIN'
+  driverFinishedAt DateTime?
   routePolyline String?
   distanceMeters Int?
   durationSeconds Int?
@@ -237,6 +238,7 @@ model Booking {
   passenger       User          @relation("PassengerBookings", fields: [passengerId], references: [id], onDelete: Cascade)
   numberOfSeats   Int
   status          BookingStatus @default(PENDING)
+  passengerFinishedAt DateTime?
   cancelledAt     DateTime?
   cancelledBy     String?       // 'PASSENGER' | 'DRIVER' | 'ADMIN'
   cancelReason    CancelReason?
