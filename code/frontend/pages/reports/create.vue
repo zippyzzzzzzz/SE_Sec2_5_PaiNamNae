@@ -69,9 +69,9 @@
               <option value="INAPPROPRIATE_BEHAVIOR">พฤติกรรมที่ไม่เหมาะสม</option>
               <option value="LOST_ITEM">ของหายหลังเดินทาง</option>
               <option value="CLEANLINESS">ความสะอาดของรถ</option>
-              <option value="OTHER">อื่น ๆ</option>
               <option value="VIOLATED_AGREEMENT">ละเมิดข้อตกลง</option>
               <option value="DETAILS_MISMATCH">รายละเอียดไม่ตรงกัน</option>
+              <option value="OTHER">อื่น ๆ</option>
             </select>
           </div>
 
