@@ -80,12 +80,22 @@
             <label class="block text-sm font-medium text-gray-900 mb-2" id="report_name">
               เรื่อง <span class="text-red-500">*</span>
             </label>
-            <input 
-              v-model="reportTopic"
-              type="text"
-              placeholder="โปรดระบุเรื่องของรายงาน"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            />
+            <div class="relative">
+              <input 
+                v-model="reportTopic"
+                type="text"
+                placeholder="โปรดระบุเรื่องของรายงาน"
+                @input="validateReportTopic"
+                :class="['w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 transition', topicError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300']"
+              />
+              <div v-if="topicError" class="absolute right-3 top-2.5 text-red-500">
+                <Icon name="mdi:alert-circle" class="w-5 h-5" />
+              </div>
+            </div>
+            <p v-if="topicError" class="text-red-500 text-xs mt-1 flex items-center gap-1">
+              <Icon name="mdi:alert-circle" class="w-4 h-4" />
+              {{ topicError }}
+            </p>
           </div>
 
           <!-- Report Description -->
@@ -93,12 +103,22 @@
             <label class="block text-sm font-medium text-gray-900 mb-2" id="report_dt">
               รายละเอียด <span class="text-red-500">*</span>
             </label>
-            <textarea 
-              v-model="reportDescription"
-              rows="4"
-              placeholder="โปรดอธิบายรายละเอียดของปัญหา"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"
-            ></textarea>
+            <div class="relative">
+              <textarea 
+                v-model="reportDescription"
+                rows="4"
+                placeholder="โปรดอธิบายรายละเอียดของปัญหา"
+                @input="validateReportDescription"
+                :class="['w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 resize-none transition', descriptionError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300']"
+              ></textarea>
+              <div v-if="descriptionError" class="absolute right-3 top-2.5 text-red-500">
+                <Icon name="mdi:alert-circle" class="w-5 h-5" />
+              </div>
+            </div>
+            <p v-if="descriptionError" class="text-red-500 text-xs mt-1 flex items-center gap-1">
+              <Icon name="mdi:alert-circle" class="w-4 h-4" />
+              {{ descriptionError }}
+            </p>
           </div>
 
           <!-- Evidence Section -->
@@ -220,38 +240,66 @@
             <div class="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <label class="block text-sm text-gray-700 mb-1" id="Name">ชื่อจริง <span class="text-red-500">*</span></label>
-                <input 
-                  v-model="contactFirstName"
-                  type="text"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                />
+                <div class="relative">
+                  <input 
+                    v-model="contactFirstName"
+                    type="text"
+                    @input="validateFirstName"
+                    :class="['w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition', firstNameError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300']"
+                  />
+                  <div v-if="firstNameError" class="absolute right-3 top-2.5 text-red-500">
+                    <Icon name="mdi:alert-circle" class="w-4 h-4" />
+                  </div>
+                </div>
+                <p v-if="firstNameError" class="text-red-500 text-xs mt-1">{{ firstNameError }}</p>
               </div>
               <div>
                 <label class="block text-sm text-gray-700 mb-1" id="last_name">นามสกุล <span class="text-red-500">*</span></label>
-                <input 
-                  v-model="contactLastName"
-                  type="text"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                />
+                <div class="relative">
+                  <input 
+                    v-model="contactLastName"
+                    type="text"
+                    @input="validateLastName"
+                    :class="['w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition', lastNameError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300']"
+                  />
+                  <div v-if="lastNameError" class="absolute right-3 top-2.5 text-red-500">
+                    <Icon name="mdi:alert-circle" class="w-4 h-4" />
+                  </div>
+                </div>
+                <p v-if="lastNameError" class="text-red-500 text-xs mt-1">{{ lastNameError }}</p>
               </div>
             </div>
 
             <div class="mb-4">
               <label class="block text-sm text-gray-700 mb-1" id="num">เบอร์โทรศัพท์ <span class="text-red-500">*</span></label>
-              <input 
-                v-model="contactPhone"
-                type="tel"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-              />
+              <div class="relative">
+                <input 
+                  v-model="contactPhone"
+                  type="tel"
+                  @input="validatePhone"
+                  :class="['w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition', phoneError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300']"
+                />
+                <div v-if="phoneError" class="absolute right-3 top-2.5 text-red-500">
+                  <Icon name="mdi:alert-circle" class="w-4 h-4" />
+                </div>
+              </div>
+              <p v-if="phoneError" class="text-red-500 text-xs mt-1">{{ phoneError }}</p>
             </div>
 
             <div>
               <label class="block text-sm text-gray-700 mb-1" id="report_mail">อีเมล</label>
-              <input 
-                v-model="contactEmail"
-                type="email"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-              />
+              <div class="relative">
+                <input 
+                  v-model="contactEmail"
+                  type="email"
+                  @input="validateEmail"
+                  :class="['w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition', emailError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300']"
+                />
+                <div v-if="emailError" class="absolute right-3 top-2.5 text-red-500">
+                  <Icon name="mdi:alert-circle" class="w-4 h-4" />
+                </div>
+              </div>
+              <p v-if="emailError" class="text-red-500 text-xs mt-1">{{ emailError }}</p>
             </div>
           </div>
 
@@ -306,6 +354,14 @@ const contactFirstName = ref('')
 const contactLastName = ref('')
 const contactPhone = ref('')
 const contactEmail = ref('')
+
+// Validation Errors
+const topicError = ref('')
+const descriptionError = ref('')
+const firstNameError = ref('')
+const lastNameError = ref('')
+const phoneError = ref('')
+const emailError = ref('')
 
 // UI State
 const isDraggingMedia = ref(false)
@@ -456,9 +512,153 @@ const onAlertLeave = (el) => {
   el.style.transition = 'opacity 0.3s ease, transform 0.3s ease'
 }
 
+// Validation Helper Functions
+const hasSpecialCharactersOrEmoji = (text) => {
+  // Check for emoji
+  const emojiRegex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g
+  if (emojiRegex.test(text)) {
+    return true
+  }
+  return false
+}
+
+const validateTextInput = (text) => {
+  // ตัวอักษรพิเศษที่ไม่อนุญาต (ยกเว้น space, hyphen, comma, period, parenthesis)
+  const specialCharRegex = /[!@#$%^&*+=\[\]{};':"\\|<>/?~`]/g
+  if (specialCharRegex.test(text)) {
+    return true
+  }
+  return false
+}
+
+const validateReportTopic = () => {
+  if (!reportTopic.value.trim()) {
+    topicError.value = ''
+    return true
+  }
+  
+  if (hasSpecialCharactersOrEmoji(reportTopic.value)) {
+    topicError.value = 'ห้ามป้อนอิโมจิหรือสัญลักษณ์พิเศษ'
+    return false
+  }
+  
+  if (validateTextInput(reportTopic.value)) {
+    topicError.value = 'ห้ามป้อนตัวอักษรพิเศษ (!@#$%^&* ฯลฯ)'
+    return false
+  }
+  
+  topicError.value = ''
+  return true
+}
+
+const validateReportDescription = () => {
+  if (!reportDescription.value.trim()) {
+    descriptionError.value = ''
+    return true
+  }
+  
+  if (hasSpecialCharactersOrEmoji(reportDescription.value)) {
+    descriptionError.value = 'ห้ามป้อนอิโมจิหรือสัญลักษณ์พิเศษ'
+    return false
+  }
+  
+  if (validateTextInput(reportDescription.value)) {
+    descriptionError.value = 'ห้ามป้อนตัวอักษรพิเศษ (!@#$%^&* ฯลฯ)'
+    return false
+  }
+  
+  descriptionError.value = ''
+  return true
+}
+
+const validateFirstName = () => {
+  if (!contactFirstName.value.trim()) {
+    firstNameError.value = ''
+    return true
+  }
+  
+  if (hasSpecialCharactersOrEmoji(contactFirstName.value)) {
+    firstNameError.value = 'ห้ามป้อนอิโมจิหรือสัญลักษณ์พิเศษ'
+    return false
+  }
+  
+  if (validateTextInput(contactFirstName.value)) {
+    firstNameError.value = 'ห้ามป้อนตัวอักษรพิเศษ (!@#$%^&* ฯลฯ)'
+    return false
+  }
+  
+  firstNameError.value = ''
+  return true
+}
+
+const validateLastName = () => {
+  if (!contactLastName.value.trim()) {
+    lastNameError.value = ''
+    return true
+  }
+  
+  if (hasSpecialCharactersOrEmoji(contactLastName.value)) {
+    lastNameError.value = 'ห้ามป้อนอิโมจิหรือสัญลักษณ์พิเศษ'
+    return false
+  }
+  
+  if (validateTextInput(contactLastName.value)) {
+    lastNameError.value = 'ห้ามป้อนตัวอักษรพิเศษ (!@#$%^&* ฯลฯ)'
+    return false
+  }
+  
+  lastNameError.value = ''
+  return true
+}
+
+const validatePhone = () => {
+  if (!contactPhone.value.trim()) {
+    phoneError.value = ''
+    return true
+  }
+  
+  if (hasSpecialCharactersOrEmoji(contactPhone.value)) {
+    phoneError.value = 'ห้ามป้อนอิโมจิหรือสัญลักษณ์พิเศษ'
+    return false
+  }
+  
+  // อนุญาตเฉพาะตัวเลข + - ( ) space
+  const phoneRegex = /[^0-9+\-() ]/g
+  if (phoneRegex.test(contactPhone.value)) {
+    phoneError.value = 'เบอร์โทรศัพท์ต้องประกอบด้วยตัวเลขเท่านั้น'
+    return false
+  }
+  
+  phoneError.value = ''
+  return true
+}
+
+const validateEmail = () => {
+  if (!contactEmail.value.trim()) {
+    emailError.value = ''
+    return true
+  }
+  
+  if (hasSpecialCharactersOrEmoji(contactEmail.value)) {
+    emailError.value = 'ห้ามป้อนอิโmojiหรือสัญลักษณ์พิเศษที่ไม่สนับสนุน'
+    return false
+  }
+  
+  // Email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(contactEmail.value)) {
+    emailError.value = 'รูปแบบอีเมลไม่ถูกต้อง'
+    return false
+  }
+  
+  emailError.value = ''
+  return true
+}
+
 // Form Validation
 const isFormValid = computed(() => {
-  return (
+  // Check all required fields are filled
+  const fieldsValid = (
     selectedCategory.value &&
     reportTopic.value.trim() &&
     reportDescription.value.trim() &&
@@ -466,12 +666,30 @@ const isFormValid = computed(() => {
     contactLastName.value.trim() &&
     contactPhone.value.trim()
   )
+  
+  // Check no validation errors
+  const noErrors = !topicError.value && 
+                   !descriptionError.value && 
+                   !firstNameError.value && 
+                   !lastNameError.value && 
+                   !phoneError.value && 
+                   (!contactEmail.value.trim() || !emailError.value)
+  
+  return fieldsValid && noErrors
 })
 
 // Submit Report
 const submitReport = async () => {
+  // Validate all fields
+  const isTopicValid = validateReportTopic()
+  const isDescriptionValid = validateReportDescription()
+  const isFirstNameValid = validateFirstName()
+  const isLastNameValid = validateLastName()
+  const isPhoneValid = validatePhone()
+  const isEmailValid = contactEmail.value.trim() ? validateEmail() : true
+  
   if (!isFormValid.value) {
-    showErrorAlert('กรุณากรอกข้อมูลที่จำเป็นทั้งหมด')
+    showErrorAlert('กรุณากรอกข้อมูลที่จำเป็นทั้งหมดโดยไม่มีตัวอักษรพิเศษหรืออิโมจิ')
     return
   }
 
