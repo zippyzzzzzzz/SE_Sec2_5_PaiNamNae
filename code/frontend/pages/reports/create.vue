@@ -77,7 +77,7 @@
 
           <!-- Report Topic -->
           <div>
-            <label class="block text-sm font-medium text-gray-900 mb-2">
+            <label class="block text-sm font-medium text-gray-900 mb-2" id="report_name">
               เรื่อง <span class="text-red-500">*</span>
             </label>
             <input 
@@ -90,7 +90,7 @@
 
           <!-- Report Description -->
           <div>
-            <label class="block text-sm font-medium text-gray-900 mb-2">
+            <label class="block text-sm font-medium text-gray-900 mb-2" id="report_dt">
               รายละเอียด <span class="text-red-500">*</span>
             </label>
             <textarea 
@@ -164,7 +164,7 @@
                     <div class="flex-1 min-w-0">
                       <p class="text-sm font-medium text-gray-900 truncate">{{ media.file.name }}</p>
                       <p class="text-xs text-gray-500">
-                        {{ media.type === 'image' ? '🖼️ รูปภาพ' : '🎥 วิดีโอ' }} • {{ (media.file.size / 1024 / 1024).toFixed(2) }} MB
+                        {{ media.type === 'image' ? 'รูปภาพ' : 'วิดีโอ' }} • {{ (media.file.size / 1024 / 1024).toFixed(2) }} MB
                       </p>
                     </div>
 
@@ -182,7 +182,7 @@
 
                 <!-- Size warning -->
                 <div class="mt-3 text-xs text-gray-500">
-                  <p>✓ รวมขนาด: {{ getTotalMediaSize() }} MB</p>
+                  <p>รวมขนาด: {{ getTotalMediaSize() }} MB</p>
                 </div>
               </div>
             </div>
@@ -219,7 +219,7 @@
             
             <div class="grid grid-cols-2 gap-4 mb-4">
               <div>
-                <label class="block text-sm text-gray-700 mb-1">ชื่อจริง <span class="text-red-500">*</span></label>
+                <label class="block text-sm text-gray-700 mb-1" id="Name">ชื่อจริง <span class="text-red-500">*</span></label>
                 <input 
                   v-model="contactFirstName"
                   type="text"
@@ -227,7 +227,7 @@
                 />
               </div>
               <div>
-                <label class="block text-sm text-gray-700 mb-1">นามสกุล <span class="text-red-500">*</span></label>
+                <label class="block text-sm text-gray-700 mb-1" id="last_name">นามสกุล <span class="text-red-500">*</span></label>
                 <input 
                   v-model="contactLastName"
                   type="text"
@@ -237,7 +237,7 @@
             </div>
 
             <div class="mb-4">
-              <label class="block text-sm text-gray-700 mb-1">เบอร์โทรศัพท์ <span class="text-red-500">*</span></label>
+              <label class="block text-sm text-gray-700 mb-1" id="num">เบอร์โทรศัพท์ <span class="text-red-500">*</span></label>
               <input 
                 v-model="contactPhone"
                 type="tel"
@@ -246,7 +246,7 @@
             </div>
 
             <div>
-              <label class="block text-sm text-gray-700 mb-1">อีเมล</label>
+              <label class="block text-sm text-gray-700 mb-1" id="report_mail">อีเมล</label>
               <input 
                 v-model="contactEmail"
                 type="email"

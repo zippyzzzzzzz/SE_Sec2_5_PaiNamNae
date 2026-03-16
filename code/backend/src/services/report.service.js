@@ -3,11 +3,9 @@ const prisma = new PrismaClient();
 const ApiError = require("../utils/ApiError");
 
 class ReportService {
-  // Create a new report
   async createReport(reportData, passengerId) {
     const { bookingId, category, reportTopic, reportDescription, reportImages, reportVideos, contactFirstName, contactLastName, contactPhoneNumber, contactEmail } = reportData;
 
-    // Validate booking exists
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
       include: {
@@ -21,17 +19,14 @@ class ReportService {
       throw new ApiError(404, "Booking not found");
     }
 
-    // Verify passenger owns this booking
     if (booking.passengerId !== passengerId) {
       throw new ApiError(403, "You can only report your own bookings");
     }
 
-    // Check if route is completed
     if (booking.route.status !== "COMPLETED") {
       throw new ApiError(400, "Can only report completed routes");
     }
 
-    // Check if within 3-day report window (from route updatedAt)
     const routeCompletedAt = new Date(booking.route.updatedAt);
     const now = new Date();
     const daysDifference = (now - routeCompletedAt) / (1000 * 60 * 60 * 24);
@@ -40,13 +35,11 @@ class ReportService {
       throw new ApiError(400, "Report window closed. You can only report within 3 days of trip completion");
     }
 
-    // Get passenger contact info from user
     const passenger = await prisma.user.findUnique({
       where: { id: passengerId },
       select: { firstName: true, lastName: true, phoneNumber: true, email: true }
     });
 
-    // Validate contact info
     const contactInfo = {
       firstName: contactFirstName || passenger?.firstName || "",
       lastName: contactLastName || passenger?.lastName || "",
@@ -58,7 +51,6 @@ class ReportService {
       throw new ApiError(400, "Contact phone number and email are required");
     }
 
-    // Create report
     const report = await prisma.report.create({
       data: {
         bookingId,
@@ -91,7 +83,6 @@ class ReportService {
     return report;
   }
 
-  // Get user's reports with pagination
   async getUserReports(passengerId, queryParams = {}) {
     const { page = 1, limit = 10, status, category } = queryParams;
     const skip = (page - 1) * limit;
@@ -141,7 +132,6 @@ class ReportService {
     };
   }
 
-  // Get single report by ID
   async getReportById(reportId, userId) {
     const report = await prisma.report.findUnique({
       where: { id: reportId },
@@ -166,7 +156,6 @@ class ReportService {
       throw new ApiError(404, "Report not found");
     }
 
-    // Only passenger can view their own report
     if (report.passengerId !== userId) {
       throw new ApiError(403, "Unauthorized access to report");
     }
@@ -174,7 +163,6 @@ class ReportService {
     return report;
   }
 
-  // Get reports for a specific booking (passenger view only)
   async getBookingReports(bookingId, passengerId) {
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
@@ -197,7 +185,6 @@ class ReportService {
     return reports;
   }
 
-  // Update report status (admin/system only - for future admin panel)
   async updateReportStatus(reportId, newStatus) {
     const validStatuses = ["PENDING", "UNDER_REVIEW", "CONTACTING_DRIVER", "RESOLVED", "CLOSED"];
     
@@ -216,7 +203,6 @@ class ReportService {
     return report;
   }
 
-  // Check if passenger can report this trip
   async canReportTrip(bookingId, passengerId) {
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
