@@ -77,7 +77,15 @@ export default defineNuxtPlugin((nuxtApp) => {
                 return null;
             }
 
-            const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+            const queryParams = new URLSearchParams({
+                apiKey: config.public.firebaseApiKey,
+                authDomain: config.public.firebaseAuthDomain,
+                projectId: config.public.firebaseProjectId,
+                messagingSenderId: config.public.firebaseMessagingSenderId,
+                appId: config.public.firebaseAppId,
+            }).toString();
+
+            const reg = await navigator.serviceWorker.register(`/firebase-messaging-sw.js?${queryParams}`);
             const token = await getToken(messaging, { vapidKey: config.public.firebaseVapidKey, serviceWorkerRegistration: reg });
 
             if (!token) return null;

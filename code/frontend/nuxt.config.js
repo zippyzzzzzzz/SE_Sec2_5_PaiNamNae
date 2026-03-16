@@ -10,9 +10,20 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   runtimeConfig: {
     public: {
+<<<<<<< Updated upstream
       apiBase: "http://localhost:3000/api/",
       //apiBase:"https://cp353004-team2-5.onrender.com/api",
       googleMapsApiKey: process.env.NUXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
+=======
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || "http://localhost:3000/api",
+      googleMapsApiKey: "",
+      firebaseApiKey: "",
+      firebaseAuthDomain: "",
+      firebaseProjectId: "",
+      firebaseMessagingSenderId: "",
+      firebaseAppId: "",
+      firebaseVapidKey: ""
+>>>>>>> Stashed changes
     },
   },
   devServer: {

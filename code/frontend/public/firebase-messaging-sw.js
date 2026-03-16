@@ -1,12 +1,14 @@
 importScripts('https://www.gstatic.com/firebasejs/11.1.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/11.1.0/firebase-messaging-compat.js');
 
+const params = new URLSearchParams(self.location.search);
+
 const firebaseConfig = {
-    apiKey: self.NUXT_PUBLIC_FIREBASE_API_KEY || '',
-    authDomain: self.NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
-    projectId: self.NUXT_PUBLIC_FIREBASE_PROJECT_ID || '',
-    messagingSenderId: self.NUXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
-    appId: self.NUXT_PUBLIC_FIREBASE_APP_ID || '',
+    apiKey: params.get('apiKey') || '',
+    authDomain: params.get('authDomain') || '',
+    projectId: params.get('projectId') || '',
+    messagingSenderId: params.get('messagingSenderId') || '',
+    appId: params.get('appId') || '',
 };
 
 const DEFAULT_TARGET = '';
