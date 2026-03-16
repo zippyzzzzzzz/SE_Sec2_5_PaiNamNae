@@ -11,3 +11,12 @@
 - Update verification status display based on combined OCR and face recognition results
 - Add database fields for OCR confidence scores and result summary (if needed)
 - Add UAT and API test for autoVerify in register flow
+
+## Sprint 2 - No.12 Notification
+- Add push token registration endpoint
+- Add booking chat message creation endpoint
+- Add message history endpoint
+- Add data-only FCM dispatch for booking messages
+- Add service worker handling for background notifications and deep-link focus/open logic
+- Add foreground notification rendering and token bootstrap in Nuxt plugin
+- Add database models PushSubscription and Message; extend Notification for BOOKING flow and link to User/Booking
