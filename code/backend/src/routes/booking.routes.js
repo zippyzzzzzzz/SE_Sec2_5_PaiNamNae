@@ -97,6 +97,14 @@ router.patch(
   bookingController.updateBookingStatus
 );
 
+// PATCH /bookings/:id/finish
+router.patch(
+  '/:id/finish',
+  protect,
+  validate({ params: idParamSchema }),
+  bookingController.finishTrip
+);
+
 // PATCH /bookings/:id/cancel
 router.patch(
   '/:id/cancel',

@@ -44,10 +44,12 @@
                                                 {{ route.origin }} → {{ route.destination }}
                                             </h4>
                                             <span class="status-badge" :class="{
-                                                'status-confirmed': route.status === 'available',
+                                                'status-confirmed': route.status === 'available' || route.status === 'in_transit',
                                                 'status-pending': route.status === 'full',
+                                                'status-completed': route.status === 'completed',
+                                                'status-cancelled': route.status === 'cancelled',
                                             }">
-                                                {{ route.status === 'available' ? 'เปิดรับผู้โดยสาร' : 'เต็ม' }}
+                                                {{ routeStatusLabel(route.status) }}
                                             </span>
                                         </div>
                                         <p class="mt-1 text-sm text-gray-600">
@@ -196,6 +198,8 @@
                                                 class="status-badge status-rejected">ปฏิเสธ</span>
                                             <span v-else-if="trip.status === 'cancelled'"
                                                 class="status-badge status-cancelled">ยกเลิก</span>
+                                            <span v-else-if="trip.status === 'completed'"
+                                                class="status-badge status-completed">จบทริปแล้ว</span>
                                         </div>
                                         <p class="mt-1 text-sm text-gray-600">จุดนัดพบ: {{ trip.pickupPoint }}</p>
                                         <p class="text-sm text-gray-600">
@@ -359,6 +363,17 @@
                                         แชทกับผู้โดยสาร
                                     </button>
 
+                                    <button v-if="trip.status === 'confirmed' && !trip.driverFinishedAt"
+                                        @click.stop="finishTrip(trip)" :disabled="finishingTripIds[trip.id]"
+                                        class="px-4 py-2 text-sm text-white transition duration-200 bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed">
+                                        {{ finishingTripIds[trip.id] ? 'กำลังบันทึก...' : 'จบการเดินทาง' }}
+                                    </button>
+                                    <button v-else-if="trip.status === 'confirmed' && trip.driverFinishedAt"
+                                        class="px-4 py-2 text-sm text-white transition duration-200 bg-gray-400 rounded-md cursor-not-allowed"
+                                        disabled>
+                                        รอผู้โดยสารยืนยัน
+                                    </button>
+
                                     <button v-else-if="['rejected', 'cancelled'].includes(trip.status)"
                                         @click.stop="openConfirmModal(trip, 'delete')"
                                         class="px-4 py-2 text-sm text-gray-600 transition duration-200 border border-gray-300 rounded-md hover:bg-gray-50">
@@ -468,6 +483,7 @@ const isLoading = ref(false)
 const mapContainer = ref(null)
 const allTrips = ref([])
 const myRoutes = ref([])
+const finishingTripIds = ref({})
 
 // ---------- Google Maps states ----------
 let gmap = null
@@ -486,6 +502,7 @@ const tabs = [
     { status: 'confirmed', label: 'ยืนยันแล้ว' },
     { status: 'rejected', label: 'ปฏิเสธ' },
     { status: 'cancelled', label: 'ยกเลิก' },
+    { status: 'completed', label: 'จบทริปแล้ว' },
     { status: 'all', label: 'ทั้งหมด' },
     { status: 'myRoutes', label: 'เส้นทางของฉัน' },
 ]
@@ -498,6 +515,23 @@ function cleanAddr(a) {
         .replace(/,?\s*(Thailand|ไทย|ประเทศ)\s*$/i, '')
         .replace(/\s{2,}/g, ' ')
         .trim()
+}
+
+function routeStatusLabel(status) {
+    switch (String(status || '').toLowerCase()) {
+        case 'available':
+            return 'เปิดรับผู้โดยสาร'
+        case 'full':
+            return 'เต็ม'
+        case 'in_transit':
+            return 'กำลังเดินทาง'
+        case 'completed':
+            return 'จบทริปแล้ว'
+        case 'cancelled':
+            return 'ยกเลิก'
+        default:
+            return status || '-'
+    }
 }
 
 const reasonLabelMap = {
@@ -535,7 +569,7 @@ async function fetchMyRoutes() {
     try {
         const routes = await $api('/routes/me')
 
-        const allowedRouteStatuses = new Set(['AVAILABLE', 'FULL', 'IN_TRANSIT'])
+        const allowedRouteStatuses = new Set(['AVAILABLE', 'FULL', 'IN_TRANSIT', 'COMPLETED'])
 
         const formatted = []
         const ownRoutes = []
@@ -586,7 +620,9 @@ async function fetchMyRoutes() {
             for (const b of (r.bookings || [])) {
                 formatted.push({
                     id: b.id,
-                    status: (b.status || '').toLowerCase(),
+                    status: r.status === 'COMPLETED' ? 'completed' : (b.status || '').toLowerCase(),
+                    passengerFinishedAt: b.passengerFinishedAt || null,
+                    driverFinishedAt: r.driverFinishedAt || null,
                     origin: start?.name || `(${Number(start.lat).toFixed(2)}, ${Number(start.lng).toFixed(2)})`,
                     destination: end?.name || `(${Number(end.lat).toFixed(2)}, ${Number(end.lng).toFixed(2)})`,
                     originHasName: !!start?.name,
@@ -687,6 +723,26 @@ async function fetchMyRoutes() {
         toast.error('เกิดข้อผิดพลาด', error?.data?.message || 'ไม่สามารถโหลดข้อมูลได้')
     } finally {
         isLoading.value = false
+    }
+}
+
+async function finishTrip(trip) {
+    if (!trip?.id) return
+    if (finishingTripIds.value[trip.id]) return
+    finishingTripIds.value[trip.id] = true
+    try {
+        const res = await $api(`/bookings/${trip.id}/finish`, { method: 'PATCH' })
+        await fetchMyRoutes()
+        if (res?.completed) {
+            toast.success('จบทริปแล้ว')
+        } else {
+            toast.success('บันทึกการจบทริปแล้ว รอผู้โดยสารยืนยัน')
+        }
+    } catch (error) {
+        console.error('Failed to finish trip:', error)
+        toast.error('ไม่สามารถจบทริปได้', error?.data?.message || 'ลองใหม่อีกครั้ง')
+    } finally {
+        delete finishingTripIds.value[trip.id]
     }
 }
 
@@ -1103,6 +1159,11 @@ watch(activeTab, () => {
 .status-cancelled {
     background-color: #f3f4f6;
     color: #6b7280;
+}
+
+.status-completed {
+    background-color: #dbeafe;
+    color: #0c4a6e;
 }
 
 @keyframes slide-in-from-top {
