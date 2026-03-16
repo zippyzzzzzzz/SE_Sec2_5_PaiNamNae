@@ -166,10 +166,15 @@
                                         </button>
                                     </template>
 
-                                    <!-- COMPLETED: แสดงปุ่ม Report -->
-                                    <button v-else-if="trip.status === 'completed'" @click.stop="goToReport(trip)"
+                                    <!-- COMPLETED: แสดงปุ่ม Report หรือ Expired -->
+                                    <button v-if="trip.status === 'completed' && !isReportWindowClosed(trip)" @click.stop="goToReport(trip)"
                                         class="px-4 py-2 text-sm text-white transition duration-200 bg-orange-600 rounded-md hover:bg-orange-700">
                                         รายงานปัญหา
+                                    </button>
+                                    <button v-else-if="trip.status === 'completed'" @click.stop="goToReport(trip)"
+                                        class="px-4 py-2 text-sm text-white transition duration-200 bg-gray-400 rounded-md cursor-not-allowed"
+                                        disabled>
+                                        เลยเวลารายงาน
                                     </button>
 
                                     <!-- REJECTED / CANCELLED: ลบได้ -->
@@ -371,6 +376,8 @@ const quickRepliesPassenger = [
 ]
 const canSendMessage = computed(() => messageContent.value.trim().length > 0)
 
+
+
 // --- Computed Properties ---
 const filteredTrips = computed(() => {
     if (activeTab.value === 'all') return allTrips.value
@@ -380,6 +387,21 @@ const filteredTrips = computed(() => {
 const selectedTrip = computed(() => {
     return allTrips.value.find((trip) => trip.id === selectedTripId.value) || null
 })
+
+const isReportWindowClosed = (trip) => {
+    if (trip.status !== 'completed' || !trip.completedDate) return false
+    const completedAt = new Date(trip.completedDate)
+    const now = new Date()
+    const daysDiff = (now - completedAt) / (1000 * 60 * 60 * 24)
+    return daysDiff > 3
+}
+
+const getDaysPassedSinceCompletion = (trip) => {
+    if (!trip.completedDate) return 0
+    const completedAt = new Date(trip.completedDate)
+    const now = new Date()
+    return Math.floor((now - completedAt) / (1000 * 60 * 60 * 24))
+}
 
 function cleanAddr(a) {
     return (a || '')
@@ -457,6 +479,7 @@ async function fetchMyTrips() {
                 pickupPoint: b.pickupLocation?.name || '-',
                 date: dayjs(b.route.departureTime).format('D MMMM BBBB'),
                 time: dayjs(b.route.departureTime).format('HH:mm น.'),
+                completedDate: b.route.updatedAt,
                 price: (b.route.pricePerSeat || 0) * (b.numberOfSeats || 1),
                 seats: b.numberOfSeats || 1,
                 driver: driverData,
@@ -769,10 +792,12 @@ const applyQuickReply = (text) => {
 }
 
 const goToReport = (trip) => {
-    router.push({
-        path: '/reports/create',
-        query: { bookingId: trip.id }
-    })
+    if (!isReportWindowClosed(trip)) {
+        router.push({
+            path: '/reports/create',
+            query: { bookingId: trip.id }
+        })
+    }
 }
 
 watch(messageContent, (val) => {
