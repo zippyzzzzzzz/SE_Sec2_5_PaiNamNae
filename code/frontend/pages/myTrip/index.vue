@@ -164,6 +164,16 @@
                                             class="px-4 py-2 text-sm text-white transition duration-200 bg-blue-600 rounded-md hover:bg-blue-700">
                                             แชทกับผู้ขับ
                                         </button>
+                                        <button v-if="!trip.passengerFinishedAt"
+                                            @click.stop="finishTrip(trip)" :disabled="finishingTripIds[trip.id]"
+                                            class="px-4 py-2 text-sm text-white transition duration-200 bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed">
+                                            {{ finishingTripIds[trip.id] ? 'กำลังบันทึก...' : 'จบการเดินทาง' }}
+                                        </button>
+                                        <button v-else
+                                            class="px-4 py-2 text-sm text-white transition duration-200 bg-gray-400 rounded-md cursor-not-allowed"
+                                            disabled>
+                                            รอคนขับยืนยัน
+                                        </button>
                                     </template>
 
                                     <!-- COMPLETED: แสดงปุ่ม Report หรือ Expired -->
@@ -323,6 +333,7 @@ let map = null
 let currentPolyline = null
 let currentMarkers = []
 const allTrips = ref([])
+const finishingTripIds = ref({})
 
 let gmap = null // Google Map instance
 let activePolyline = null
@@ -526,6 +537,26 @@ async function fetchMyTrips() {
         allTrips.value = []
     } finally {
         isLoading.value = false
+    }
+}
+
+async function finishTrip(trip) {
+    if (!trip?.id) return
+    if (finishingTripIds.value[trip.id]) return
+    finishingTripIds.value[trip.id] = true
+    try {
+        const res = await $api(`/bookings/${trip.id}/finish`, { method: 'PATCH' })
+        await fetchMyTrips()
+        if (res?.completed) {
+            toast.success('จบทริปแล้ว')
+        } else {
+            toast.success('บันทึกการจบทริปแล้ว รออีกฝ่ายยืนยัน')
+        }
+    } catch (error) {
+        console.error('Failed to finish trip:', error)
+        toast.error('ไม่สามารถจบทริปได้', error?.data?.message || 'ลองใหม่อีกครั้ง')
+    } finally {
+        delete finishingTripIds.value[trip.id]
     }
 }
 
