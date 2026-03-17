@@ -248,7 +248,7 @@ const updateVerificationStatus = asyncHandler(async (req, res) => {
         type: 'VERIFICATION',
         title: 'คำขอคนขับถูกปฏิเสธ',
         body: 'ข้อมูลใบขับขี่/รูปถ่ายของคุณไม่ผ่านการตรวจสอบ กรุณาตรวจสอบและส่งใหม่อีกครั้ง',
-        link: '/driver-verification',
+        link: '/',
         metadata: {
           kind: 'driver_verification',
           verificationId: updated.id,

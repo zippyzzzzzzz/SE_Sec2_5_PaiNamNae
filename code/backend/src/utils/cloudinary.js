@@ -8,13 +8,13 @@ cloudinary.config({
     secure: true,
 });
 
-const uploadToCloudinary = (fileBuffer, folder) => {
+const uploadToCloudinary = (fileBuffer, folder, resourceType = "auto") => {
     return new Promise((resolve, reject) => {
         
         const uploadStream = cloudinary.uploader.upload_stream(
             {
                 folder: folder,
-                resource_type: "auto",
+                resource_type: resourceType,
             },
             (error, result) => {
                 if (error) {

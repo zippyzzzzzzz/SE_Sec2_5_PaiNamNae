@@ -1,12 +1,21 @@
 const axios = require("axios");
 const FormData = require("form-data");
 const prisma = require("../utils/prisma");
+//  Import ทั้ง verifyIdCard และ verifyDrivingLicense มาใช้งาน
+const { verifyIdCard, verifyDrivingLicense } = require("./ocr.service");
 
-const USER_FACE_THRESHOLD = parseFloat(
+// two levels of thresholds: low = auto reject, high = auto approve
+const USER_FACE_HIGH_THRESHOLD = parseFloat(
   process.env.USER_AUTO_VERIFY_CONFIDENCE_THRESHOLD ||
   process.env.AUTO_VERIFY_FACE_THRESHOLD ||
   process.env.FACE_THRESHOLD ||
   75
+);
+const USER_FACE_LOW_THRESHOLD = parseFloat(
+  process.env.USER_AUTO_VERIFY_LOW_CONFIDENCE_THRESHOLD ||
+  process.env.USER_AUTO_VERIFY_LOW_THRESHOLD ||
+  // default  lower value (e.g. 50)
+  40
 );
 
 const DRIVER_FACE_THRESHOLD = parseFloat(
@@ -52,86 +61,276 @@ async function compareFaces(imageUrl1, imageUrl2, apiKey, apiSecret) {
 
 async function autoVerifyUser(user) {
   if (!user?.nationalIdPhotoUrl || !user?.selfiePhotoUrl) {
-    return { verified: false, error: "MISSING_PHOTOS" };
+    return { verified: false, error: "MISSING_PHOTOS", status: "PENDING" };
   }
 
-  const result = await compareFaces(user.nationalIdPhotoUrl, 
-                                    user.selfiePhotoUrl, 
-                                    process.env.FACE_API_KEY, 
-                                    process.env.FACE_API_SECRET);
-  if (!result.ok) return { verified: false, error: result.error };
+  const result = await compareFaces(
+    user.nationalIdPhotoUrl,
+    user.selfiePhotoUrl,
+    process.env.FACE_API_KEY,
+    process.env.FACE_API_SECRET
+  );
+  if (!result.ok) return { verified: false, error: result.error, status: "PENDING" };
 
-  const verified = result.confidence >= USER_FACE_THRESHOLD;
-  if (verified) {
-    await prisma.user.update({
+  const conf = result.confidence;
+  let status;
+  const updateData = {
+      autoVerifyConfidence: conf,
+      autoVerifyHighThreshold: USER_FACE_HIGH_THRESHOLD,
+      autoVerifyLowThreshold: USER_FACE_LOW_THRESHOLD,
+  };
+  if (conf >= USER_FACE_HIGH_THRESHOLD) {
+    status = "VERIFIED"; // auto approve
+    updateData.isVerified = true;
+    updateData.verificationStatus = status;
+  } else if (conf < USER_FACE_LOW_THRESHOLD) {
+    status = "AUTO_REJECTED"; //low
+    updateData.verificationStatus = status;
+  } else {
+    status = "PENDING"; // borderline, wait for admin review
+    updateData.verificationStatus = status;
+  }
+  await prisma.user.update({
       where: { id: user.id },
-      data: { isVerified: true },
-    });
-  }
+      data: updateData,
+  });
 
   return {
-    verified,
-    confidence: result.confidence,
-    threshold: USER_FACE_THRESHOLD,
+    verified: status === "VERIFIED",
+    status,
+    confidence: conf,
+    highThreshold: USER_FACE_HIGH_THRESHOLD,
+    lowThreshold: USER_FACE_LOW_THRESHOLD,
+  };
+}
+
+async function autoVerifyUserWithOCR(user) {
+  console.log("[AutoVerify] CALLED FOR USER:", user.id);
+  if (!user?.nationalIdPhotoUrl || !user?.selfiePhotoUrl) {
+    return { verified: false, error: "MISSING_PHOTOS", status: "PENDING" };
+  }
+
+  if (!user?.nationalIdNumber || !user?.nationalIdExpiryDate) {
+    return { verified: false, error: "MISSING_ID_INFO", status: "PENDING" };
+  }
+
+  console.log("[AutoVerify] Starting OCR ID card verification...");
+  const ocrResult = await verifyIdCard(
+    user.nationalIdPhotoUrl,
+    user.nationalIdNumber,
+    user.nationalIdExpiryDate
+  );
+
+  console.log("[AutoVerify] OCR Result:", {
+    status: ocrResult.verificationStatus,
+    confidence: ocrResult.confidence,
+    idMatch: ocrResult.idNumberMatch,
+    dateMatch: ocrResult.expiryDateMatch,
+  });
+
+  console.log("[AutoVerify] Starting face comparison verification...");
+  const faceResult = await compareFaces(
+    user.nationalIdPhotoUrl,
+    user.selfiePhotoUrl,
+    process.env.FACE_API_KEY,
+    process.env.FACE_API_SECRET
+  );
+
+  if (!faceResult.ok) {
+    console.log("[AutoVerify] Face comparison failed:", faceResult.error);
+    return { 
+      verified: false, 
+      error: faceResult.error, 
+      status: "PENDING",
+      ocrVerification: ocrResult,
+    };
+  }
+
+  const faceConfidence = faceResult.confidence;
+  console.log("[AutoVerify] Face Confidence:", faceConfidence);
+  console.log("[AutoVerify] thresholds high/low", USER_FACE_HIGH_THRESHOLD, USER_FACE_LOW_THRESHOLD);
+
+  let finalStatus;
+  const updateData = {
+    autoVerifyConfidence: faceConfidence,
+    autoVerifyHighThreshold: USER_FACE_HIGH_THRESHOLD,
+    autoVerifyLowThreshold: USER_FACE_LOW_THRESHOLD,
+    ocrVerificationStatus: ocrResult.verificationStatus, // Store OCR result
+    ocrData: ocrResult.ocrData, // Store extracted data for audit
+  };
+
+  const ocrVerified = ocrResult.verificationStatus === "VERIFIED";
+  const ocrBorderline = ocrResult.verificationStatus === "BORDERLINE";
+  const ocrAutoRejected = ocrResult.verificationStatus === "AUTO_REJECTED";
+  const faceHighConfidence = faceConfidence >= USER_FACE_HIGH_THRESHOLD;
+  const faceLowConfidence = faceConfidence < USER_FACE_LOW_THRESHOLD;
+  console.log("[AutoVerify] ocrVerified",ocrVerified,"ocrBorderline",ocrBorderline,"ocrAutoRejected",ocrAutoRejected);
+  console.log("[AutoVerify] faceHigh",faceHighConfidence,"faceLow",faceLowConfidence);
+
+  if (ocrAutoRejected) {
+
+    finalStatus = "AUTO_REJECTED";
+  } else if (ocrBorderline || (ocrVerified && (faceConfidence >= USER_FACE_LOW_THRESHOLD && faceConfidence < USER_FACE_HIGH_THRESHOLD))) {
+
+    finalStatus = "PENDING";
+  } else if (ocrVerified && faceHighConfidence) {
+
+    finalStatus = "VERIFIED";
+    updateData.isVerified = true;
+  } else if (ocrVerified && faceLowConfidence) {
+
+    finalStatus = "AUTO_REJECTED";
+  } else {
+
+    finalStatus = "PENDING";
+  }
+  console.log("[AutoVerify] finalStatus", finalStatus);
+
+  updateData.verificationStatus = finalStatus;
+
+  // Update user with combined verification results
+  await prisma.user.update({
+    where: { id: user.id },
+    data: updateData,
+  });
+
+  return {
+    verified: finalStatus === "VERIFIED",
+    status: finalStatus,
+    faceConfidence,
+    faceHighThreshold: USER_FACE_HIGH_THRESHOLD,
+    faceLowThreshold: USER_FACE_LOW_THRESHOLD,
+    ocrVerification: ocrResult,
+    combinedMessage: `ID Card: ${ocrResult.message} | Face: ${
+      faceHighConfidence
+        ? "Match"
+        : faceLowConfidence
+        ? "Mismatch"
+        : "Near match"
+    }`,
   };
 }
 
 async function autoVerifyDriverVerification(verification) {
+  // 1. ตรวจสอบว่ามีรูปภาพครบถ้วนไหม
   if (!verification?.licensePhotoUrl || !verification?.selfiePhotoUrl) {
     return { verified: false, status: "PENDING", error: "MISSING_PHOTOS" };
   }
 
+  // --- เพิ่ม: ตรวจ OCR ก่อน ---
+  console.log("[DriverVerify] Starting OCR License verification...");
+  const ocrResult = await verifyDrivingLicense(
+    verification.licensePhotoUrl,
+    verification.licenseNumber, // เลขใบขับขี่ที่ User กรอก
+    verification.licenseExpiryDate
+  );
+
+  console.log("[DriverVerify] OCR Decision:", ocrResult.verificationStatus);
+
+  // 1. เคสที่แย่มาก (ต่ำกว่า 30%) ปัดตกทันที
+  if (ocrResult.verificationStatus === "AUTO_REJECTED") {
+    console.log("[DriverVerify] OCR very low confidence (<30%). Rejecting immediately.");
+    await updateDriverStatus(verification, "REJECTED");
+    return { 
+      verified: false, 
+      status: "REJECTED", 
+      error: "OCR_REJECTED", 
+      message: "ข้อมูลไม่ตรงกับรูปภาพอย่างรุนแรง โปรดถ่ายรูปบัตรให้ชัดเจน" 
+    };
+  }
+
+  // 2. เคสก้ำกึ่ง (30% - 79%) ส่งให้ Admin ตรวจมือ (PENDING)
+  // แก้ไข: จากเดิมที่อาจจะหลุด Reject ตอนนี้ให้เข้า PENDING เพื่อรอ Admin
+  if (ocrResult.verificationStatus === "NEEDS_REVIEW" || (ocrResult.confidence >= 30 && ocrResult.confidence < 80)) {
+    console.log("[DriverVerify] OCR in grey area (30-79%). Sending to Admin (PENDING).");
+    await updateDriverStatus(verification, "PENDING");
+    return { 
+      verified: false, 
+      status: "PENDING", 
+      message: "ข้อมูลบางส่วนไม่ชัดเจน กำลังรอเจ้าหน้าที่ตรวจสอบเพิ่มเติม" 
+    };
+  }
+
+  
+  // เคสที่ 3: ข้อมูล OCR ผ่านเกณฑ์ (>= 80%) ถึงจะยอมจ่ายเงินยิง Face API
+  console.log("[DriverVerify] OCR passed threshold. Starting face comparison...");
+  
+  // --- ตรวจใบหน้า ---
   const result = await compareFaces(
     verification.licensePhotoUrl,
     verification.selfiePhotoUrl,
     process.env.FACE_DRIVER_KEY || process.env.FACE_API_KEY,
     process.env.FACE_DRIVER_SECRET || process.env.FACE_API_SECRET
   );
-  if (!result.ok) return { verified: false, status: "PENDING", error: result.error };
 
-  const verified = result.confidence >= DRIVER_FACE_THRESHOLD;
-  if (verified) {
-    await prisma.$transaction(async (tx) => {
-      await tx.driverVerification.update({
-        where: { id: verification.id },
-        data: { status: "APPROVED" },
-      });
-      await tx.user.update({
-        where: { id: verification.userId },
-        data: { isVerified: true, role: "DRIVER" },
-      });
-    });
-  } else {
-    await prisma.$transaction(async (tx) => {
-      await tx.driverVerification.update({
-        where: { id: verification.id },
-        data: { status: "REJECTED" },
-      });
-      await tx.user.update({
-        where: { id: verification.userId },
-        data: { isVerified: false, role: "PASSENGER" },
-      });
-      await tx.route.updateMany({
-        where: {
-          driverId: verification.userId,
-          status: "AVAILABLE",
-        },
-        data: {
-          status: "CANCELLED",
-        },
-      });
-    });
+  if (!result.ok) {
+      console.log("[DriverVerify] Face API Error, falling back to Admin review.");
+      await updateDriverStatus(verification, "PENDING"); // ถ้า Face API ล่ม ให้แอดมินตรวจมือ
+      return { verified: false, status: "PENDING", error: result.error };
   }
 
+  const faceConfidence = result.confidence;
+  const facePassed = faceConfidence >= DRIVER_FACE_THRESHOLD;
+
+  //  [Decision Engine] สรุปผล: ต้องผ่านทั้ง OCR (VERIFIED/BORDERLINE) และ Face Match ถึงจะ APPROVED
+  // ถ้า OCR เป็น BORDERLINE แต่หน้าตรงเป๊ะ เราอาจจะส่งให้ Admin ตรวจต่อ (PENDING)
+  let finalStatus;
+  if (facePassed && ocrResult.verificationStatus === "VERIFIED") {
+    finalStatus = "APPROVED";
+  } else if (!facePassed) {
+    console.log("[DriverVerify] Face mismatch. Rejecting.");
+    finalStatus = "REJECTED"; // หน้าไม่เหมือน ปัดตกทันที
+  } else {
+    console.log("[DriverVerify] Face OK but OCR is Borderline. Sending to Admin.");
+    finalStatus = "PENDING";  // กรณีหน้าเหมือนแต่ OCR ก้ำกึ่ง (BORDERLINE)
+  }
+
+  //  [DB Update] บันทึกผลลง Database
+  await updateDriverStatus(verification, finalStatus);
+
   return {
-    verified,
-    status: verified ? "APPROVED" : "REJECTED",
-    confidence: result.confidence,
+    verified: finalStatus === "APPROVED",
+    status: finalStatus,
+    confidence: faceConfidence,
     threshold: DRIVER_FACE_THRESHOLD,
+    ocrStatus: ocrResult.verificationStatus,
+    message: finalStatus === "APPROVED" ? "ยืนยันผู้ขับขี่สำเร็จ" : "ข้อมูลไม่ชัดเจนหรือชื่อไม่ตรง"
   };
+
+  // [Helper Function] แยก Logic การอัปเดตตารางเพื่อความสะอาดของโค้ด
+  async function updateDriverStatus(verification, status) {
+  return await prisma.$transaction(async (tx) => {
+    // อัปเดตตารางใบขออนุมัติ
+    await tx.driverVerification.update({
+      where: { id: verification.id },
+      data: { status: status },
+    });
+
+    if (status === "APPROVED") {
+      // ถ้าผ่าน ให้เป็น DRIVER
+      await tx.user.update({
+        where: { id: verification.userId },
+        data: { role: "DRIVER" },
+      });
+    } else if (status === "REJECTED") {
+      // ถ้าไม่ผ่าน ให้กลับเป็น PASSENGER และยกเลิกงาน
+      await tx.user.update({
+        where: { id: verification.userId },
+        data: { role: "PASSENGER" },
+      });
+      await tx.route.updateMany({
+        where: { driverId: verification.userId, status: "AVAILABLE" },
+        data: { status: "CANCELLED" },
+      });
+    }
+  });
 }
+
+}
+
 
 module.exports = {
   autoVerifyUser,
+  autoVerifyUserWithOCR,
   autoVerifyDriverVerification,
 };

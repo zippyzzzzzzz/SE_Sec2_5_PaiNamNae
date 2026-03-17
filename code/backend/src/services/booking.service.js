@@ -377,6 +377,82 @@ const updateBookingStatus = async (id, status, userId) => {
   });
 };
 
+const finishTrip = async (id, userId) => {
+  return prisma.$transaction(async (tx) => {
+    const booking = await tx.booking.findUnique({
+      where: { id },
+      include: {
+        route: {
+          include: {
+            bookings: true,
+          },
+        },
+      },
+    });
+    if (!booking) throw new ApiError(404, 'Booking not found');
+
+    const isPassenger = booking.passengerId === userId;
+    const isDriver = booking.route.driverId === userId;
+    if (!isPassenger && !isDriver) {
+      throw new ApiError(403, 'Forbidden');
+    }
+    if (booking.status !== BookingStatus.CONFIRMED) {
+      throw new ApiError(400, 'Only confirmed bookings can be finished');
+    }
+    if (booking.route.status === RouteStatus.CANCELLED) {
+      throw new ApiError(400, 'Route has been cancelled');
+    }
+
+    const now = new Date();
+    let passengerFinishedAt = booking.passengerFinishedAt;
+    let driverFinishedAt = booking.route.driverFinishedAt;
+
+    if (isPassenger && !passengerFinishedAt) {
+      passengerFinishedAt = now;
+      await tx.booking.update({
+        where: { id },
+        data: { passengerFinishedAt },
+      });
+    }
+
+    if (isDriver && !driverFinishedAt) {
+      driverFinishedAt = now;
+      await tx.route.update({
+        where: { id: booking.routeId },
+        data: { driverFinishedAt },
+      });
+    }
+
+    const route = await tx.route.findUnique({
+      where: { id: booking.routeId },
+      include: { bookings: true },
+    });
+
+    const confirmedBookings = (route.bookings || []).filter(
+      (b) => b.status === BookingStatus.CONFIRMED
+    );
+    const allPassengersFinished =
+      confirmedBookings.length > 0 &&
+      confirmedBookings.every((b) => Boolean(b.passengerFinishedAt));
+
+    const shouldComplete = Boolean(route.driverFinishedAt) && allPassengersFinished;
+    if (shouldComplete && route.status !== RouteStatus.COMPLETED) {
+      await tx.route.update({
+        where: { id: route.id },
+        data: { status: RouteStatus.COMPLETED },
+      });
+    }
+
+    return {
+      bookingId: booking.id,
+      routeId: booking.routeId,
+      driverFinishedAt: route.driverFinishedAt,
+      passengerFinishedAt,
+      completed: shouldComplete,
+    };
+  });
+};
+
 const cancelBooking = async (id, passengerId, opts = {}) => {
   const { reason } = opts;
 
@@ -499,6 +575,7 @@ module.exports = {
   getMyBookings,
   getBookingById,
   updateBookingStatus,
+  finishTrip,
   cancelBooking,
   deleteBooking,
   adminDeleteBooking
