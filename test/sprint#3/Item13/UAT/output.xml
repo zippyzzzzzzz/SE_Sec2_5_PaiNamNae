@@ -1,0 +1,585 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot generator="Robot 7.4.1 (Python 3.10.10 on win32)" generated="2026-03-18T00:22:37.848475" rpa="false" schemaversion="5">
+<suite id="s1" name="UAT" source="F:\DEV\SE_Sec2_5_PaiNamNae\test\sprint#3\Item13\UAT\UAT.robot">
+<test id="s1-t1" name="UATSprint3-Report-001_ReportProblem_Success_ImageEvidence" line="11">
+<kw name="Login As Passenger" owner="keywords" type="SETUP">
+<kw name="Open Fast Browser And Allow Noti" owner="keywords">
+<kw name="Evaluate" owner="BuiltIn">
+<msg time="2026-03-18T00:22:38.077250" level="INFO">${options} = &lt;selenium.webdriver.chrome.options.Options object at 0x00000193E9A85150&gt;</msg>
+<var>${options}</var>
+<arg>selenium.webdriver.ChromeOptions()</arg>
+<arg>modules=selenium.webdriver</arg>
+<doc>Evaluates the given expression in Python and returns the result.</doc>
+<status status="PASS" start="2026-03-18T00:22:38.073249" elapsed="0.004001"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-03-18T00:22:38.078755" level="INFO">${prefs} = {'profile.default_content_setting_values.notifications': 1}</msg>
+<var>${prefs}</var>
+<arg>profile.default_content_setting_values.notifications=${1}</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="PASS" start="2026-03-18T00:22:38.078755" elapsed="0.000000"/>
+</kw>
+<kw name="Call Method" owner="BuiltIn">
+<arg>${options}</arg>
+<arg>add_experimental_option</arg>
+<arg>prefs</arg>
+<arg>${prefs}</arg>
+<doc>Calls the named method of the given object with the provided arguments.</doc>
+<status status="PASS" start="2026-03-18T00:22:38.078755" elapsed="0.001006"/>
+</kw>
+<kw name="Call Method" owner="BuiltIn">
+<arg>${options}</arg>
+<arg>set_capability</arg>
+<arg>unhandledPromptBehavior</arg>
+<arg>accept</arg>
+<doc>Calls the named method of the given object with the provided arguments.</doc>
+<status status="PASS" start="2026-03-18T00:22:38.079761" elapsed="0.000000"/>
+</kw>
+<kw name="Open Browser" owner="SeleniumLibrary">
+<msg time="2026-03-18T00:22:38.079761" level="INFO">Opening browser 'chrome' to base url 'https://csse0568.cpkku.com/login'.</msg>
+<arg>${URL_LOGIN}</arg>
+<arg>chrome</arg>
+<arg>alias=${alias_name}</arg>
+<arg>options=${options}</arg>
+<doc>Opens a new browser instance to the optional ``url``.</doc>
+<status status="PASS" start="2026-03-18T00:22:38.079761" elapsed="1.493566"/>
+</kw>
+<kw name="Maximize Browser Window" owner="SeleniumLibrary">
+<doc>Maximizes current browser window.</doc>
+<status status="PASS" start="2026-03-18T00:22:39.574326" elapsed="0.078630"/>
+</kw>
+<kw name="Execute Javascript" owner="SeleniumLibrary">
+<msg time="2026-03-18T00:22:39.653957" level="INFO">Executing JavaScript:
+window.alert = function() { return true; }; window.confirm = function() { return true; };
+Without any arguments.</msg>
+<arg>window.alert = function() { return true; }; window.confirm = function() { return true; };</arg>
+<doc>Executes the given JavaScript code with possible arguments.</doc>
+<status status="PASS" start="2026-03-18T00:22:39.652956" elapsed="0.006007"/>
+</kw>
+<kw name="Set Selenium Speed" owner="SeleniumLibrary">
+<arg>${DELAY}</arg>
+<doc>Sets the delay that is waited after each Selenium command.</doc>
+<status status="PASS" start="2026-03-18T00:22:39.659963" elapsed="0.000000"/>
+</kw>
+<kw name="Set Selenium Timeout" owner="SeleniumLibrary">
+<arg>15s</arg>
+<doc>Sets the timeout that is used by various keywords.</doc>
+<status status="PASS" start="2026-03-18T00:22:39.659963" elapsed="0.115347"/>
+</kw>
+<arg>PassengerBrowser</arg>
+<status status="PASS" start="2026-03-18T00:22:38.073249" elapsed="1.702061"/>
+</kw>
+<kw name="Fast Login" owner="keywords">
+<kw name="Wait Until Element Is Visible" owner="SeleniumLibrary">
+<arg>${INPUT_USERNAME}</arg>
+<arg>30s</arg>
+<doc>Waits until the element ``locator`` is visible.</doc>
+<status status="PASS" start="2026-03-18T00:22:39.776310" elapsed="0.234064"/>
+</kw>
+<kw name="Input Text" owner="SeleniumLibrary">
+<msg time="2026-03-18T00:22:40.011376" level="INFO">Typing text 'passenger' into text field 'id=identifier'.</msg>
+<arg>${INPUT_USERNAME}</arg>
+<arg>${user}</arg>
+<doc>Types the given ``text`` into the text field identified by ``locator``.</doc>
+<status status="PASS" start="2026-03-18T00:22:40.010374" elapsed="0.402656"/>
+</kw>
+<kw name="Input Text" owner="SeleniumLibrary">
+<msg time="2026-03-18T00:22:40.413030" level="INFO">Typing text 'Admin1234!' into text field 'id=password'.</msg>
+<arg>${INPUT_PASSWORD}</arg>
+<arg>${pass}</arg>
+<doc>Types the given ``text`` into the text field identified by ``locator``.</doc>
+<status status="PASS" start="2026-03-18T00:22:40.413030" elapsed="0.406029"/>
+</kw>
+<kw name="Click Element" owner="SeleniumLibrary">
+<msg time="2026-03-18T00:22:40.819059" level="INFO">Clicking element 'xpath=//button[contains(text(),'เข้าสู่ระบบ') or contains(text(),'Login')]'.</msg>
+<arg>${BTN_LOGIN}</arg>
+<doc>Click the element identified by ``locator``.</doc>
+<status status="PASS" start="2026-03-18T00:22:40.819059" elapsed="0.295862"/>
+</kw>
+<kw name="Wait Until Element Is Not Visible" owner="SeleniumLibrary">
+<arg>${BTN_LOGIN}</arg>
+<arg>15s</arg>
+<doc>Waits until the element ``locator`` is not visible.</doc>
+<status status="PASS" start="2026-03-18T00:22:41.114921" elapsed="0.530686"/>
+</kw>
+<arg>${PASS_USER}</arg>
+<arg>${PASS_PASS}</arg>
+<status status="PASS" start="2026-03-18T00:22:39.775310" elapsed="1.870297"/>
+</kw>
+<status status="PASS" start="2026-03-18T00:22:38.072244" elapsed="3.573363"/>
+</kw>
+<kw name="Navigate To My Trip Page" owner="keywords">
+<kw name="Go To" owner="SeleniumLibrary">
+<msg time="2026-03-18T00:22:41.646613" level="INFO">Opening url 'https://csse0568.cpkku.com/myTrip'</msg>
+<arg>${URL_MY_TRIP}</arg>
+<doc>Navigates the current browser window to the provided ``url``.</doc>
+<status status="PASS" start="2026-03-18T00:22:41.646613" elapsed="0.250864"/>
+</kw>
+<kw name="Wait Until Element Is Visible" owner="SeleniumLibrary">
+<arg>${TAB_TRIP_DONE}</arg>
+<arg>15s</arg>
+<doc>Waits until the element ``locator`` is visible.</doc>
+<status status="PASS" start="2026-03-18T00:22:41.897477" elapsed="0.219905"/>
+</kw>
+<kw name="Click Element" owner="SeleniumLibrary">
+<msg time="2026-03-18T00:22:42.118381" level="INFO">Clicking element 'xpath=//button[contains(@class,'tab-button') and contains(text(),'จบทริปแล้ว')]'.</msg>
+<arg>${TAB_TRIP_DONE}</arg>
+<doc>Click the element identified by ``locator``.</doc>
+<status status="PASS" start="2026-03-18T00:22:42.117382" elapsed="0.249183"/>
+</kw>
+<kw name="Wait Until Element Is Visible" owner="SeleniumLibrary">
+<arg>${BTN_REPORT_PROBLEM}</arg>
+<arg>15s</arg>
+<doc>Waits until the element ``locator`` is visible.</doc>
+<status status="PASS" start="2026-03-18T00:22:42.366565" elapsed="0.544994"/>
+</kw>
+<status status="PASS" start="2026-03-18T00:22:41.645607" elapsed="1.265952"/>
+</kw>
+<kw name="Open Report Form" owner="keywords">
+<kw name="Click Element" owner="SeleniumLibrary">
+<msg time="2026-03-18T00:22:42.912064" level="INFO">Clicking element 'css:button.bg-orange-600'.</msg>
+<arg>${BTN_REPORT_PROBLEM}</arg>
+<doc>Click the element identified by ``locator``.</doc>
+<status status="PASS" start="2026-03-18T00:22:42.912064" elapsed="0.281083"/>
+</kw>
+<kw name="Wait Until Element Is Visible" owner="SeleniumLibrary">
+<arg>${SELECT_CATEGORY}</arg>
+<arg>15s</arg>
+<doc>Waits until the element ``locator`` is visible.</doc>
+<status status="PASS" start="2026-03-18T00:22:43.193147" elapsed="0.528835"/>
+</kw>
+<status status="PASS" start="2026-03-18T00:22:42.912064" elapsed="0.809918"/>
+</kw>
+<kw name="Select Category" owner="keywords">
+<kw name="Select From List By Value" owner="SeleniumLibrary">
+<msg time="2026-03-18T00:22:43.723433" level="INFO">Selecting options from selection list 'css:select.border-gray-300.rounded-lg' by value LOST_ITEM.</msg>
+<arg>${SELECT_CATEGORY}</arg>
+<arg>${value}</arg>
+<doc>Selects options from selection list ``locator`` by ``values``.</doc>
+<status status="PASS" start="2026-03-18T00:22:43.721982" elapsed="0.937067"/>
+</kw>
+<arg>${CATEGORY_VALUE}</arg>
+<status status="PASS" start="2026-03-18T00:22:43.721982" elapsed="0.937067"/>
+</kw>
+<kw name="Fill Subject" owner="keywords">
+<kw name="Input Text" owner="SeleniumLibrary">
+<msg time="2026-03-18T00:22:44.660050" level="INFO">Typing text 'ทดสอบการรายงานปัญหา' into text field 'css:input[placeholder='โปรดระบุเรื่องของรายงาน']'.</msg>
+<arg>${INPUT_SUBJECT}</arg>
+<arg>${text}</arg>
+<doc>Types the given ``text`` into the text field identified by ``locator``.</doc>
+<status status="PASS" start="2026-03-18T00:22:44.660050" elapsed="0.404172"/>
+</kw>
+<arg>${VALID_SUBJECT}</arg>
+<status status="PASS" start="2026-03-18T00:22:44.659049" elapsed="0.405173"/>
+</kw>
+<kw name="Fill Detail" owner="keywords">
+<kw name="Input Text" owner="SeleniumLibrary">
+<msg time="2026-03-18T00:22:45.065222" level="INFO">Typing text 'รายละเอียดของปัญหาสำหรับการทดสอบ Robot Framework Sprint 3' into text field 'css:textarea[placeholder='โปรดอธิบายรายละเอียดของปัญหา']'.</msg>
+<arg>${TEXTAREA_DETAIL}</arg>
+<arg>${text}</arg>
+<doc>Types the given ``text`` into the text field identified by ``locator``.</doc>
+<status status="PASS" start="2026-03-18T00:22:45.065222" elapsed="0.450759"/>
+</kw>
+<arg>${VALID_DETAIL}</arg>
+<status status="PASS" start="2026-03-18T00:22:45.065222" elapsed="0.450759"/>
+</kw>
+<kw name="Upload Image Evidence" owner="keywords">
+<kw name="Choose File" owner="SeleniumLibrary">
+<msg time="2026-03-18T00:22:45.516981" level="INFO">Sending F:\DEV\SE_Sec2_5_PaiNamNae\test\sprint#3\Item13\UAT\test_files\evidence.png to browser.</msg>
+<arg>${INPUT_FILE}</arg>
+<arg>${png}</arg>
+<doc>Inputs the ``file_path`` into the file input field ``locator``.</doc>
+<status status="PASS" start="2026-03-18T00:22:45.516981" elapsed="0.233173"/>
+</kw>
+<kw name="Choose File" owner="SeleniumLibrary">
+<msg time="2026-03-18T00:22:45.751155" level="INFO">Sending F:\DEV\SE_Sec2_5_PaiNamNae\test\sprint#3\Item13\UAT\test_files\evidence.jpg to browser.</msg>
+<arg>${INPUT_FILE}</arg>
+<arg>${jpg}</arg>
+<doc>Inputs the ``file_path`` into the file input field ``locator``.</doc>
+<status status="PASS" start="2026-03-18T00:22:45.750154" elapsed="0.310954"/>
+</kw>
+<kw name="Choose File" owner="SeleniumLibrary">
+<msg time="2026-03-18T00:22:46.062110" level="INFO">Sending F:\DEV\SE_Sec2_5_PaiNamNae\test\sprint#3\Item13\UAT\test_files\evidence.jpeg to browser.</msg>
+<arg>${INPUT_FILE}</arg>
+<arg>${jpeg}</arg>
+<doc>Inputs the ``file_path`` into the file input field ``locator``.</doc>
+<status status="PASS" start="2026-03-18T00:22:46.061108" elapsed="0.233386"/>
+</kw>
+<arg>${FILE_PNG}</arg>
+<arg>${FILE_JPG}</arg>
+<arg>${FILE_JPEG}</arg>
+<status status="PASS" start="2026-03-18T00:22:45.515981" elapsed="0.778513"/>
+</kw>
+<kw name="Fill First Name" owner="keywords">
+<kw name="Clear Element Text" owner="SeleniumLibrary">
+<arg>${INPUT_FIRSTNAME}</arg>
+<doc>Clears the value of the text-input-element identified by ``locator``.</doc>
+<status status="PASS" start="2026-03-18T00:22:46.295494" elapsed="0.234083"/>
+</kw>
+<kw name="Input Text" owner="SeleniumLibrary">
+<msg time="2026-03-18T00:22:46.529577" level="INFO">Typing text 'ทดสอบ' into text field 'xpath=//label[@id='Name']/following-sibling::div/input'.</msg>
+<arg>${INPUT_FIRSTNAME}</arg>
+<arg>${text}</arg>
+<doc>Types the given ``text`` into the text field identified by ``locator``.</doc>
+<status status="PASS" start="2026-03-18T00:22:46.529577" elapsed="0.372758"/>
+</kw>
+<arg>${VALID_FIRSTNAME}</arg>
+<status status="PASS" start="2026-03-18T00:22:46.294494" elapsed="0.608346"/>
+</kw>
+<kw name="Fill Last Name" owner="keywords">
+<kw name="Clear Element Text" owner="SeleniumLibrary">
+<arg>${INPUT_LASTNAME}</arg>
+<doc>Clears the value of the text-input-element identified by ``locator``.</doc>
+<status status="PASS" start="2026-03-18T00:22:46.903845" elapsed="0.246990"/>
+</kw>
+<kw name="Input Text" owner="SeleniumLibrary">
+<msg time="2026-03-18T00:22:47.150835" level="INFO">Typing text 'นามสกุล' into text field 'xpath=//label[@id='last_name']/following-sibling::div/input'.</msg>
+<arg>${INPUT_LASTNAME}</arg>
+<arg>${text}</arg>
+<doc>Types the given ``text`` into the text field identified by ``locator``.</doc>
+<status status="PASS" start="2026-03-18T00:22:47.150835" elapsed="0.482095"/>
+</kw>
+<arg>${VALID_LASTNAME}</arg>
+<status status="PASS" start="2026-03-18T00:22:46.902840" elapsed="0.730090"/>
+</kw>
+<kw name="Fill Phone" owner="keywords">
+<kw name="Clear Element Text" owner="SeleniumLibrary">
+<arg>${INPUT_PHONE}</arg>
+<doc>Clears the value of the text-input-element identified by ``locator``.</doc>
+<status status="PASS" start="2026-03-18T00:22:47.633931" elapsed="0.233068"/>
+</kw>
+<kw name="Input Text" owner="SeleniumLibrary">
+<msg time="2026-03-18T00:22:47.868001" level="INFO">Typing text '0812345678' into text field 'css:input[type='tel']'.</msg>
+<arg>${INPUT_PHONE}</arg>
+<arg>${text}</arg>
+<doc>Types the given ``text`` into the text field identified by ``locator``.</doc>
+<status status="PASS" start="2026-03-18T00:22:47.866999" elapsed="0.403383"/>
+</kw>
+<arg>${VALID_PHONE}</arg>
+<status status="PASS" start="2026-03-18T00:22:47.633931" elapsed="0.636956"/>
+</kw>
+<kw name="Fill Email" owner="keywords">
+<kw name="Clear Element Text" owner="SeleniumLibrary">
+<arg>${INPUT_EMAIL}</arg>
+<doc>Clears the value of the text-input-element identified by ``locator``.</doc>
+<status status="PASS" start="2026-03-18T00:22:48.270887" elapsed="0.248037"/>
+</kw>
+<kw name="Input Text" owner="SeleniumLibrary">
+<msg time="2026-03-18T00:22:48.519924" level="INFO">Typing text 'test@example.com' into text field 'css:input[type='email']'.</msg>
+<arg>${INPUT_EMAIL}</arg>
+<arg>${text}</arg>
+<doc>Types the given ``text`` into the text field identified by ``locator``.</doc>
+<status status="PASS" start="2026-03-18T00:22:48.518924" elapsed="0.404501"/>
+</kw>
+<arg>${VALID_EMAIL}</arg>
+<status status="PASS" start="2026-03-18T00:22:48.270887" elapsed="0.652538"/>
+</kw>
+<kw name="Submit Report" owner="keywords">
+<kw name="Click Element" owner="SeleniumLibrary">
+<msg time="2026-03-18T00:22:48.924424" level="INFO">Clicking element 'css:button.bg-blue-600'.</msg>
+<arg>${BTN_SUBMIT}</arg>
+<doc>Click the element identified by ``locator``.</doc>
+<status status="PASS" start="2026-03-18T00:22:48.924424" elapsed="0.279595"/>
+</kw>
+<kw name="Wait Until Location Contains" owner="SeleniumLibrary">
+<arg>/reports/tracking</arg>
+<arg>15s</arg>
+<doc>Waits until the current URL contains ``expected``.</doc>
+<status status="PASS" start="2026-03-18T00:22:49.204019" elapsed="3.875322"/>
+</kw>
+<status status="PASS" start="2026-03-18T00:22:48.924424" elapsed="4.154917"/>
+</kw>
+<kw name="Page Should Be On Tracking Page" owner="keywords">
+<kw name="Location Should Contain" owner="SeleniumLibrary">
+<msg time="2026-03-18T00:22:53.189022" level="INFO">Current location contains 'https://csse0568.cpkku.com/reports/tracking'.</msg>
+<arg>${URL_TRACKING}</arg>
+<doc>Verifies that the current URL contains ``expected``.</doc>
+<status status="PASS" start="2026-03-18T00:22:53.080349" elapsed="0.108673"/>
+</kw>
+<status status="PASS" start="2026-03-18T00:22:53.079341" elapsed="0.109681"/>
+</kw>
+<kw name="Close All Browsers" owner="SeleniumLibrary" type="TEARDOWN">
+<doc>Closes all open browsers and resets the browser cache.</doc>
+<status status="PASS" start="2026-03-18T00:22:53.190022" elapsed="2.174575"/>
+</kw>
+<doc>ทดสอบรายงานปัญหาสำเร็จ – อัพโหลดหลักฐานรูปภาพ (PNG, JPG, JPEG)</doc>
+<tag>image</tag>
+<tag>sprint3</tag>
+<tag>success</tag>
+<status status="PASS" start="2026-03-18T00:22:38.071240" elapsed="17.293357"/>
+</test>
+<test id="s1-t2" name="UATSprint3-Report-002_ReportProblem_Success_VideoEvidence" line="27">
+<kw name="Login As Passenger" owner="keywords" type="SETUP">
+<kw name="Open Fast Browser And Allow Noti" owner="keywords">
+<kw name="Evaluate" owner="BuiltIn">
+<msg time="2026-03-18T00:22:55.366597" level="INFO">${options} = &lt;selenium.webdriver.chrome.options.Options object at 0x00000193E9C79780&gt;</msg>
+<var>${options}</var>
+<arg>selenium.webdriver.ChromeOptions()</arg>
+<arg>modules=selenium.webdriver</arg>
+<doc>Evaluates the given expression in Python and returns the result.</doc>
+<status status="PASS" start="2026-03-18T00:22:55.366597" elapsed="0.000000"/>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<msg time="2026-03-18T00:22:55.367597" level="INFO">${prefs} = {'profile.default_content_setting_values.notifications': 1}</msg>
+<var>${prefs}</var>
+<arg>profile.default_content_setting_values.notifications=${1}</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="PASS" start="2026-03-18T00:22:55.367597" elapsed="0.000000"/>
+</kw>
+<kw name="Call Method" owner="BuiltIn">
+<arg>${options}</arg>
+<arg>add_experimental_option</arg>
+<arg>prefs</arg>
+<arg>${prefs}</arg>
+<doc>Calls the named method of the given object with the provided arguments.</doc>
+<status status="PASS" start="2026-03-18T00:22:55.367597" elapsed="0.000000"/>
+</kw>
+<kw name="Call Method" owner="BuiltIn">
+<arg>${options}</arg>
+<arg>set_capability</arg>
+<arg>unhandledPromptBehavior</arg>
+<arg>accept</arg>
+<doc>Calls the named method of the given object with the provided arguments.</doc>
+<status status="PASS" start="2026-03-18T00:22:55.368597" elapsed="0.000000"/>
+</kw>
+<kw name="Open Browser" owner="SeleniumLibrary">
+<msg time="2026-03-18T00:22:55.368597" level="INFO">Opening browser 'chrome' to base url 'https://csse0568.cpkku.com/login'.</msg>
+<msg time="2026-03-18T00:22:55.452354" level="INFO">Cannot capture screenshot because no browser is open.</msg>
+<msg time="2026-03-18T00:22:55.452354" level="FAIL">NoSuchDriverException: Message: Unable to obtain driver for chrome; For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors/driver_location
+</msg>
+<arg>${URL_LOGIN}</arg>
+<arg>chrome</arg>
+<arg>alias=${alias_name}</arg>
+<arg>options=${options}</arg>
+<doc>Opens a new browser instance to the optional ``url``.</doc>
+<status status="FAIL" start="2026-03-18T00:22:55.368597" elapsed="0.155432">NoSuchDriverException: Message: Unable to obtain driver for chrome; For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors/driver_location
+</status>
+</kw>
+<kw name="Maximize Browser Window" owner="SeleniumLibrary">
+<doc>Maximizes current browser window.</doc>
+<status status="NOT RUN" start="2026-03-18T00:22:55.524029" elapsed="0.000000"/>
+</kw>
+<kw name="Execute Javascript" owner="SeleniumLibrary">
+<arg>window.alert = function() { return true; }; window.confirm = function() { return true; };</arg>
+<doc>Executes the given JavaScript code with possible arguments.</doc>
+<status status="NOT RUN" start="2026-03-18T00:22:55.524029" elapsed="0.000000"/>
+</kw>
+<kw name="Set Selenium Speed" owner="SeleniumLibrary">
+<arg>${DELAY}</arg>
+<doc>Sets the delay that is waited after each Selenium command.</doc>
+<status status="NOT RUN" start="2026-03-18T00:22:55.524029" elapsed="0.000000"/>
+</kw>
+<kw name="Set Selenium Timeout" owner="SeleniumLibrary">
+<arg>15s</arg>
+<doc>Sets the timeout that is used by various keywords.</doc>
+<status status="NOT RUN" start="2026-03-18T00:22:55.525028" elapsed="0.000000"/>
+</kw>
+<arg>PassengerBrowser</arg>
+<status status="FAIL" start="2026-03-18T00:22:55.366597" elapsed="0.158431">NoSuchDriverException: Message: Unable to obtain driver for chrome; For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors/driver_location
+</status>
+</kw>
+<kw name="Fast Login" owner="keywords">
+<arg>${PASS_USER}</arg>
+<arg>${PASS_PASS}</arg>
+<status status="NOT RUN" start="2026-03-18T00:22:55.525028" elapsed="0.000000"/>
+</kw>
+<status status="FAIL" start="2026-03-18T00:22:55.366597" elapsed="0.158431">NoSuchDriverException: Message: Unable to obtain driver for chrome; For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors/driver_location
+</status>
+</kw>
+<kw name="Close All Browsers" owner="SeleniumLibrary" type="TEARDOWN">
+<doc>Closes all open browsers and resets the browser cache.</doc>
+<status status="PASS" start="2026-03-18T00:22:55.525028" elapsed="0.001001"/>
+</kw>
+<doc>ทดสอบรายงานปัญหาสำเร็จ – อัพโหลดหลักฐานวิดีโอ (MP4)</doc>
+<tag>sprint3</tag>
+<tag>success</tag>
+<tag>video</tag>
+<status status="FAIL" start="2026-03-18T00:22:55.365598" elapsed="0.160431">Setup failed:
+NoSuchDriverException: Message: Unable to obtain driver for chrome; For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors/driver_location
+</status>
+</test>
+<test id="s1-t3" name="UATSprint3-Report-003_Invalid_NoCategory" line="47">
+<kw name="Login As Passenger" owner="keywords" type="SETUP">
+<kw name="Open Fast Browser And Allow Noti" owner="keywords">
+<kw name="Evaluate" owner="BuiltIn">
+<var>${options}</var>
+<arg>selenium.webdriver.ChromeOptions()</arg>
+<arg>modules=selenium.webdriver</arg>
+<doc>Evaluates the given expression in Python and returns the result.</doc>
+<status status="FAIL" start="2026-03-18T00:22:55.528535" elapsed="0.000000">Execution terminated by signal</status>
+</kw>
+<kw name="Create Dictionary" owner="BuiltIn">
+<var>${prefs}</var>
+<arg>profile.default_content_setting_values.notifications=${1}</arg>
+<doc>Creates and returns a dictionary based on the given ``items``.</doc>
+<status status="NOT RUN" start="2026-03-18T00:22:55.528535" elapsed="0.000000"/>
+</kw>
+<kw name="Call Method" owner="BuiltIn">
+<arg>${options}</arg>
+<arg>add_experimental_option</arg>
+<arg>prefs</arg>
+<arg>${prefs}</arg>
+<doc>Calls the named method of the given object with the provided arguments.</doc>
+<status status="NOT RUN" start="2026-03-18T00:22:55.528535" elapsed="0.000000"/>
+</kw>
+<kw name="Call Method" owner="BuiltIn">
+<arg>${options}</arg>
+<arg>set_capability</arg>
+<arg>unhandledPromptBehavior</arg>
+<arg>accept</arg>
+<doc>Calls the named method of the given object with the provided arguments.</doc>
+<status status="NOT RUN" start="2026-03-18T00:22:55.529541" elapsed="0.000000"/>
+</kw>
+<kw name="Open Browser" owner="SeleniumLibrary">
+<arg>${URL_LOGIN}</arg>
+<arg>chrome</arg>
+<arg>alias=${alias_name}</arg>
+<arg>options=${options}</arg>
+<doc>Opens a new browser instance to the optional ``url``.</doc>
+<status status="NOT RUN" start="2026-03-18T00:22:55.529541" elapsed="0.000000"/>
+</kw>
+<kw name="Maximize Browser Window" owner="SeleniumLibrary">
+<doc>Maximizes current browser window.</doc>
+<status status="NOT RUN" start="2026-03-18T00:22:55.529541" elapsed="0.000000"/>
+</kw>
+<kw name="Execute Javascript" owner="SeleniumLibrary">
+<arg>window.alert = function() { return true; }; window.confirm = function() { return true; };</arg>
+<doc>Executes the given JavaScript code with possible arguments.</doc>
+<status status="NOT RUN" start="2026-03-18T00:22:55.529541" elapsed="0.000000"/>
+</kw>
+<kw name="Set Selenium Speed" owner="SeleniumLibrary">
+<arg>${DELAY}</arg>
+<doc>Sets the delay that is waited after each Selenium command.</doc>
+<status status="NOT RUN" start="2026-03-18T00:22:55.529541" elapsed="0.000000"/>
+</kw>
+<kw name="Set Selenium Timeout" owner="SeleniumLibrary">
+<arg>15s</arg>
+<doc>Sets the timeout that is used by various keywords.</doc>
+<status status="NOT RUN" start="2026-03-18T00:22:55.529541" elapsed="0.000000"/>
+</kw>
+<arg>PassengerBrowser</arg>
+<status status="FAIL" start="2026-03-18T00:22:55.527029" elapsed="0.002512">Execution terminated by signal</status>
+</kw>
+<kw name="Fast Login" owner="keywords">
+<arg>${PASS_USER}</arg>
+<arg>${PASS_PASS}</arg>
+<status status="NOT RUN" start="2026-03-18T00:22:55.529541" elapsed="0.000999"/>
+</kw>
+<status status="FAIL" start="2026-03-18T00:22:55.527029" elapsed="0.003511">Execution terminated by signal</status>
+</kw>
+<kw name="Close All Browsers" owner="SeleniumLibrary" type="TEARDOWN">
+<doc>Closes all open browsers and resets the browser cache.</doc>
+<status status="PASS" start="2026-03-18T00:22:55.530540" elapsed="0.000000"/>
+</kw>
+<doc>ทดสอบ Invalid Input – ไม่เลือกหมวดหมู่ → ปุ่มส่งรายงานต้อง Disabled</doc>
+<tag>invalid</tag>
+<tag>sprint3</tag>
+<tag>validation</tag>
+<status status="FAIL" start="2026-03-18T00:22:55.526029" elapsed="0.004511">Setup failed:
+Execution terminated by signal</status>
+</test>
+<test id="s1-t4" name="UATSprint3-Report-004_Invalid_NoSubject" line="61">
+<doc>ทดสอบ Invalid Input – ไม่กรอกหัวข้อ → ปุ่มส่งรายงานต้อง Disabled</doc>
+<tag>invalid</tag>
+<tag>robot:exit</tag>
+<tag>sprint3</tag>
+<tag>validation</tag>
+<status status="FAIL" start="2026-03-18T00:22:55.530540" elapsed="0.001506">Test execution stopped due to a fatal error.</status>
+</test>
+<test id="s1-t5" name="UATSprint3-Report-005_Invalid_NoDetail" line="75">
+<doc>ทดสอบ Invalid Input – ไม่กรอกรายละเอียด → ปุ่มส่งรายงานต้อง Disabled</doc>
+<tag>invalid</tag>
+<tag>robot:exit</tag>
+<tag>sprint3</tag>
+<tag>validation</tag>
+<status status="FAIL" start="2026-03-18T00:22:55.532046" elapsed="0.001007">Test execution stopped due to a fatal error.</status>
+</test>
+<test id="s1-t6" name="UATSprint3-Report-006_Invalid_NoPhone" line="89">
+<doc>ทดสอบ Invalid Input – ไม่กรอกเบอร์โทรศัพท์ → ปุ่มส่งรายงานต้อง Disabled</doc>
+<tag>invalid</tag>
+<tag>robot:exit</tag>
+<tag>sprint3</tag>
+<tag>validation</tag>
+<status status="FAIL" start="2026-03-18T00:22:55.534058" elapsed="0.001005">Test execution stopped due to a fatal error.</status>
+</test>
+<test id="s1-t7" name="UATSprint3-Report-007_Invalid_Emoji_Subject" line="106">
+<doc>ทดสอบ Invalid Input – กรอก Emoji ในช่องหัวข้อ → ปุ่มส่งรายงานต้อง Disabled</doc>
+<tag>emoji</tag>
+<tag>invalid</tag>
+<tag>robot:exit</tag>
+<tag>sprint3</tag>
+<status status="FAIL" start="2026-03-18T00:22:55.535063" elapsed="0.001001">Test execution stopped due to a fatal error.</status>
+</test>
+<test id="s1-t8" name="UATSprint3-Report-008_Invalid_Emoji_Detail" line="120">
+<doc>ทดสอบ Invalid Input – กรอก Emoji ในช่องรายละเอียด → ปุ่มส่งรายงานต้อง Disabled</doc>
+<tag>emoji</tag>
+<tag>invalid</tag>
+<tag>robot:exit</tag>
+<tag>sprint3</tag>
+<status status="FAIL" start="2026-03-18T00:22:55.537063" elapsed="0.001000">Test execution stopped due to a fatal error.</status>
+</test>
+<test id="s1-t9" name="UATSprint3-Report-009_Invalid_Emoji_Phone" line="134">
+<doc>ทดสอบ Invalid Input – กรอก Emoji ในช่องเบอร์โทรศัพท์ → ปุ่มส่งรายงานต้อง Disabled</doc>
+<tag>emoji</tag>
+<tag>invalid</tag>
+<tag>robot:exit</tag>
+<tag>sprint3</tag>
+<status status="FAIL" start="2026-03-18T00:22:55.538063" elapsed="0.001000">Test execution stopped due to a fatal error.</status>
+</test>
+<test id="s1-t10" name="UATSprint3-Report-010_Invalid_Emoji_Email" line="148">
+<doc>ทดสอบ Invalid Input – กรอก Emoji ในช่อง Email → ปุ่มส่งรายงานต้อง Disabled</doc>
+<tag>emoji</tag>
+<tag>invalid</tag>
+<tag>robot:exit</tag>
+<tag>sprint3</tag>
+<status status="FAIL" start="2026-03-18T00:22:55.540063" elapsed="0.000999">Test execution stopped due to a fatal error.</status>
+</test>
+<test id="s1-t11" name="UATSprint3-Report-011_Invalid_OversizeImage" line="165">
+<doc>ทดสอบ Invalid Input – อัพโหลดรูปภาพขนาดเกิน 10MB → ระบบแสดง error alert ทันทีโดยไม่ต้องกด submit</doc>
+<tag>file_size</tag>
+<tag>invalid</tag>
+<tag>robot:exit</tag>
+<tag>sprint3</tag>
+<status status="FAIL" start="2026-03-18T00:22:55.542064" elapsed="0.001513">Test execution stopped due to a fatal error.</status>
+</test>
+<test id="s1-t12" name="UATSprint3-Report-012_Invalid_OversizeVideo" line="173">
+<doc>ทดสอบ Invalid Input – อัพโหลดวิดีโอขนาดเกิน 30MB → ระบบแสดง error alert ทันทีโดยไม่ต้องกด submit</doc>
+<tag>file_size</tag>
+<tag>invalid</tag>
+<tag>robot:exit</tag>
+<tag>sprint3</tag>
+<status status="FAIL" start="2026-03-18T00:22:55.544575" elapsed="0.001002">Test execution stopped due to a fatal error.</status>
+</test>
+<test id="s1-t13" name="UATSprint3-Report-013_Invalid_OversizeFileCount" line="183">
+<doc>ทดสอบ Invalid Input – อัพโหลดไฟล์เกินจำนวน (4 ไฟล์ เกิน max 3) → ระบบแสดง error alert ทันทีเมื่อพยายามเพิ่มไฟล์ที่ 4</doc>
+<tag>file_count</tag>
+<tag>invalid</tag>
+<tag>robot:exit</tag>
+<tag>sprint3</tag>
+<status status="FAIL" start="2026-03-18T00:22:55.546619" elapsed="0.001001">Test execution stopped due to a fatal error.</status>
+</test>
+<status status="FAIL" start="2026-03-18T00:22:37.849474" elapsed="17.699145"/>
+</suite>
+<statistics>
+<total>
+<stat pass="1" fail="12" skip="0">All Tests</stat>
+</total>
+<tag>
+<stat info="combined" combined="NOT robot:exit" pass="1" fail="2" skip="0">NOT robot:exit</stat>
+<stat pass="0" fail="4" skip="0">emoji</stat>
+<stat pass="0" fail="1" skip="0">file_count</stat>
+<stat pass="0" fail="2" skip="0">file_size</stat>
+<stat pass="1" fail="0" skip="0">image</stat>
+<stat pass="0" fail="11" skip="0">invalid</stat>
+<stat pass="1" fail="12" skip="0">sprint3</stat>
+<stat pass="1" fail="1" skip="0">success</stat>
+<stat pass="0" fail="4" skip="0">validation</stat>
+<stat pass="0" fail="1" skip="0">video</stat>
+</tag>
+<suite>
+<stat name="UAT" id="s1" pass="1" fail="12" skip="0">UAT</stat>
+</suite>
+</statistics>
+<errors>
+</errors>
+</robot>

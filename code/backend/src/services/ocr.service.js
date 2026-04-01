@@ -234,7 +234,7 @@ async function verifyDrivingLicense(licensePhotoUrl, userProvidedLicenseNumber, 
 // --- Export ฟังก์ชัน ---
 module.exports = {
   extractIdCardData,
-  verifyIdCard: async () => {}, // สามารถเติม Logic คล้ายกันได้
+  verifyIdCard, // สามารถเติม Logic คล้ายกันได้
   verifyDrivingLicense,
   normalizeIdNumber,
   normalizeExpiryDate,

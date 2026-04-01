@@ -3,7 +3,7 @@
 ${DELAY}                    0.1s
 
 # ── Application URLs ──────────────────────────────────────────────
-${URL_BASE}                 http://localhost:3001
+${URL_BASE}                 https://csse0568.cpkku.com
 ${URL_LOGIN}                ${URL_BASE}/login
 ${URL_MY_TRIP}              ${URL_BASE}/myTrip
 ${URL_TRACKING}             ${URL_BASE}/reports/tracking

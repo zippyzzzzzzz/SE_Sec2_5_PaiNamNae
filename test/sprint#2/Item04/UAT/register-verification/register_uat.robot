@@ -11,10 +11,10 @@ Test Template     Register Flow
 
 *** Variables ***
 ${BASE_URL}       https://csse0568.cpkku.com/
-${DB_NAME}        painamnae
+${DB_NAME}        painamnae_8thg
 ${DB_USER}        painamnae_user
-${DB_PASSWORD}    Pr6fiVGTVGaAZrZsErYEfcvKmOb3efhW
-${DB_HOST}        dpg-d668h26r433s73dd1h0g-a.singapore-postgres.render.com
+${DB_PASSWORD}    5KGTGZctCaVh0JWN0oMRj3RdNj3a0q9E
+${DB_HOST}        dpg-d6sher24d50c73bnrdt0-a.singapore-postgres.render.com
 ${DB_PORT}        5432
 
 
