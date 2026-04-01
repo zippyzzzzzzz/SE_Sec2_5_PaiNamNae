@@ -164,7 +164,7 @@ async function verifyIdCard(nationalIdPhotoUrl, userProvidedIdNumber, userProvid
   }
 
  return {
-    verificationStatus,
+    verificationStatus: status,
     ocrData,
     idNumberMatch: idMatch,
     idNumberSimilarity: idSimilarity, // ส่งค่านี้กลับไปดูด้วย
